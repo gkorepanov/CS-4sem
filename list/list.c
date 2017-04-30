@@ -36,18 +36,21 @@ int list_push_front(list_t* self, list_node_t* node) {
 	if (!self || !node)
 		return 0;
 
-	// connect the node
-	node->next = self->front;
-	node->prev = NULL;
+	if (self->front) {
+		// connect the node
+		node->prev = NULL;
+		node->next = self->front;
 
-	// set the list
-	if (self->front)
+		// set the list
 		self->front->prev = node;
-	if (!self->back)
-		self->back = node;
-	self->front = node;
-	self->size += 1;
+		self->front = node;
+	}
+	else {
+		node->prev = node->next = NULL;
+		self->front = self->back = node;
+	}
 
+	self->size += 1;
 	return LIST_OK;
 }
 
@@ -55,18 +58,21 @@ int list_push_back(list_t* self, list_node_t* node) {
 	if (!self || !node)
 		return 0;
 
-	// connect the node
-	node->next = NULL;
-	node->prev = self->back;
+	if (self->front) {
+		// connect the node
+		node->next = NULL;
+		node->prev = self->back;
 
-	// set the list
-	if (self->back)
+		// set the list
 		self->back->next = node;
-	if (!self->back)
 		self->back = node;
-	self->back = node;
-	self->size += 1;
+	}
+	else {
+		node->prev = node->next = NULL;
+		self->front = self->back = node;
+	}
 
+	self->size += 1;
 	return LIST_OK;
 }
 

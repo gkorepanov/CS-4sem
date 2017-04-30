@@ -17,7 +17,7 @@ $(TARGET): $(OBJS)
 	gcc $(FLAGS) $(LFLAGS) -MM -o $(patsubst %.o, %.d, $@) $<
 
 clean:
-	@rm $(OBJS) $(TARGET)
+	-@rm $(OBJS) $(TARGET)
 	@find . -name "*.d"    | xargs rm
 	@find . -name "*.gcov" | xargs rm
 	@find . -name "*.gcno" | xargs rm

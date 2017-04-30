@@ -2,25 +2,30 @@
 
 TARGET = ./main
 FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g
+LFLAGS = -fprofile-arcs -ftest-coverage
 OBJS = list.o main.o
 DEPS = $(OBJS:.o=.d)
 
 
 $(TARGET): $(OBJS)
-	gcc -o $@ $^
+	gcc $(LFLAGS) -o $@ $^
 
 -include $(DEPS)
 
 %.o: %.c
-	gcc $(FLAGS) -c -o $@ $<
-	gcc $(FLAGS) -MM -o $(patsubst %.o, %.d, $@) $<
+	gcc $(FLAGS) $(LFLAGS) -c -o $@ $<
+	gcc $(FLAGS) $(LFLAGS) -MM -o $(patsubst %.o, %.d, $@) $<
 
 clean:
 	@rm $(OBJS) $(TARGET)
-	@find . -name "*.d" | xargs rm
+	@find . -name "*.d"    | xargs rm
+	@find . -name "*.gcov" | xargs rm
+	@find . -name "*.gcno" | xargs rm
+	@find . -name "*.gcda" | xargs rm
 
 run:
 	$(TARGET)
+	gcov list.c
 
 debug: FLAGS += -DDEBUG
 debug: $(TARGET)

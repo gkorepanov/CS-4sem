@@ -43,6 +43,8 @@ int list_push_front(list_t* self, list_node_t* node) {
 	// set the list
 	if (self->front)
 		self->front->prev = node;
+	if (!self->back)
+		self->back = node;
 	self->front = node;
 	self->size += 1;
 
@@ -60,6 +62,8 @@ int list_push_back(list_t* self, list_node_t* node) {
 	// set the list
 	if (self->back)
 		self->back->next = node;
+	if (!self->back)
+		self->back = node;
 	self->back = node;
 	self->size += 1;
 
@@ -147,8 +151,7 @@ int list_erase(list_t* self, list_iterator_t iter) {
 	return LIST_OK;
 }
 
-int list_size(list_t* self, size_t* size)
-{
+int list_size(list_t* self, size_t* size) {
 	if (self && size) {
 		*size = self->size;
 		return LIST_OK;

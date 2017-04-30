@@ -11,11 +11,12 @@
 #define LIST_H
 
 #include <stdlib.h>
+#include <stddef.h>
 
 
 // conscientiously borrowed from Linux kernel
 #define list_entry(ptr, type, member) \
-    ((type *)((char *)(ptr) – offsetof(type, member)))
+    ((type *)((char *)(ptr) - offsetof(type, member)))
 
 #define LIST_OK  0xE2E4 // for chess fans
 

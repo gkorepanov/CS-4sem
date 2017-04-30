@@ -139,14 +139,15 @@ int list_erase(list_t* self, list_iterator_t iter) {
 	if (!self || !iter)
 		return 0;
 
+	if (iter == self->front)
+		return list_pop_front(self);
+	else if (iter == self->back)
+		return list_pop_back(self);
+
 	// set the neighbors and the list
-	if (iter->prev)
-		iter->prev->next = iter->next;
-	if (iter->next)
-		iter->next->prev = iter->prev;
+	iter->prev->next = iter->next;
+	iter->next->prev = iter->prev;
 	self->size -= 1;
-	if (!self->size)
-		self->front = self->back = NULL;
 
 	// unlink the node
 	iter->prev = iter->next = NULL;

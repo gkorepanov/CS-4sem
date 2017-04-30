@@ -65,10 +65,12 @@ int get_value(list_iterator_t iter) {
 void test_print() {
 	if (!list->size)
 		return;
+
 	for (list_iterator_t i = list_begin(list); i; i = list_iterator_next(i))
 		printf("%d ", get_value(i));
 	printf(" ");
-	for (list_iterator_t i = list_end(list); i; i = list_iterator_prev(i))
+
+	for (list_iterator_t i = list_end(list);   i; i = list_iterator_prev(i))
 		printf("%d ", get_value(i));
 	printf("\n");
 }
@@ -124,12 +126,21 @@ void test_null() {
 
 
 void test_select() {
-	assert(list_push_back(list, &arr[0].node));
+	list_push_back(list, &arr[0].node);
 	assert(list_insert(list, list_begin(list), &arr[1].node));
 	test_size_2();
 	assert(list_insert(list, list_end(list),   &arr[2].node));
 	test_size_3();
-	test_print();
+
+	assert(list_erase(list, list_begin(list)));
+	test_size_2();
+	assert(list_erase(list, list_end(list)));
+	test_size_1();
+
+	list_push_back(list, &arr[1].node);
+	list_push_back(list, &arr[0].node);
+	assert(list_erase(list, list_iterator_next(list_begin(list))));
+	test_size_2();
 }
 
 

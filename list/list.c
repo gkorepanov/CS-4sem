@@ -120,9 +120,6 @@ int list_insert(list_t* self, list_iterator_t iter, list_node_t* node) {
 	if (!self || !iter || !node)
 		return 0;
 
-	// particular case
-	// !it is not possible to insert the node after the last list element
-	// since iterator is defined as node*
 	if (iter == self->front)
 		return list_push_front(self, node);
 

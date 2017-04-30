@@ -25,7 +25,7 @@ clean:
 
 run:
 	$(TARGET)
-	gcov list.c
+	gcov -a list.c
 
 debug: FLAGS += -DDEBUG
 debug: $(TARGET)

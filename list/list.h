@@ -48,9 +48,11 @@ typedef struct ListIterator {
 	size_t pos;
 } ListIterator;
 
+const ListIterator ListIteratorNil;
+
 // step iterator
-ListIterator list_iterator_next (ListIterator iter);
-ListIterator list_iterator_prev (ListIterator iter);
+ListIterator list_iterator_next (ListIterator* iter);
+ListIterator list_iterator_prev (ListIterator* iter);
 
 // acquire iterator pointing to first (past-the-end) element
 ListIterator list_begin (List* self);

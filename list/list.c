@@ -1,41 +1,72 @@
 #include "list.h"
 
 List list_create() {
-	return (List){NULL, NULL, 0};
+	return (List) {
+		NULL,
+		NULL,
+		0
+	};
 }
 
-ListIterator list_iterator_next(ListIterator iter) {
-	return (ListIterator){iter.node,
-						  iter.next,
-						  iter.next ? iter.next->next : NULL,
-						  iter.pos + 1};
+const ListIterator ListIteratorNil = (ListIterator) {
+	NULL,
+	NULL,
+	NULL,
+	0
+};
+
+ListIterator list_iterator_next(ListIterator* iter) {
+	if (!iter)
+		return ListIteratorNil;
+
+	*iter = (ListIterator) {
+		iter->node,
+		iter->next,
+		iter->next ? iter->next->next : NULL,
+		iter->pos + 1
+	};
+	return *iter;
 }
 
-ListIterator list_iterator_prev(ListIterator iter) {
-	return (ListIterator){iter.node,
-						  iter.prev,
-						  iter.prev ? iter.prev->prev : NULL,
-						  iter.pos - 1};
+ListIterator list_iterator_prev(ListIterator* iter) {
+	if (!iter)
+		return ListIteratorNil;
+
+	*iter = (ListIterator) {
+		iter->node,
+		iter->prev,
+		iter->prev ? iter->prev->prev : NULL,
+		iter->pos - 1
+	};
+	return *iter;
+}
+
+int list_iterator_cmp(ListIterator a, ListIterator b) {
+	return a.pos - b.pos;
 }
 
 ListIterator list_begin(List* self) {
 	if (self && self->front)
-		return (ListIterator){NULL,
-		                      self->front,
-		                      self->front->next,
-		                      0};
-	else
-		return (ListIterator){NULL,
-							  NULL,
-							  NULL,
-							  0};
+		return (ListIterator) {
+			NULL,
+			self->front,
+			self->front->next,
+			0
+		};
+    else
+        return ListIteratorNil;
 }
 
 ListIterator list_end(List* self) {
-	return (ListIterator){(self && self->back) ? self->back : NULL,
-		                   NULL,
-		                   NULL,
-		                   self.size};
+	if (self && self->back)
+		return (ListIterator) {
+			self->back,
+			NULL,
+			NULL,
+			self->size
+		};
+	else
+		return ListIteratorNil;
 }
 
 int list_push_front(List* self, ListNode* node) {
@@ -123,15 +154,17 @@ int list_pop_back(List* self) {
 }
 
 int list_insert(List* self, ListIterator iter, ListNode* node) {
-	if (!self || !iter || !node)
+	if (!self /*|| !iter*/ || !node)
 		return 0;
 
-	if (iter == self->front)
+	if (iter.node == self->front)
 		return list_push_front(self, node);
+	else if (iter.node == self->back)
+		return list_push_back (self, node);
 
 	// connect the node
-	node->prev = iter->prev;
-	node->next = iter;
+	node->prev = iter.node->prev;
+	node->next = iter.node;
 
 	// set the neighbors
 	node->prev->next = node;
@@ -142,21 +175,21 @@ int list_insert(List* self, ListIterator iter, ListNode* node) {
 }
 
 int list_erase(List* self, ListIterator iter) {
-	if (!self || !iter)
+	if (!self /*|| !iter*/)
 		return 0;
 
-	if (iter == self->front)
+	if (iter.node == self->front)
 		return list_pop_front(self);
-	else if (iter == self->back)
+	else if (iter.node == self->back)
 		return list_pop_back(self);
 
 	// set the neighbors and the list
-	iter->prev->next = iter->next;
-	iter->next->prev = iter->prev;
+	iter.node->prev->next = iter.node->next;
+	iter.node->next->prev = iter.node->prev;
 	self->size -= 1;
 
 	// unlink the node
-	iter->prev = iter->next = NULL;
+	iter.node->prev = iter.node->next = NULL;
 	
 	return LIST_OK;
 }

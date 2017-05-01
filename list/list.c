@@ -1,38 +1,38 @@
 #include "list.h"
 
-list_t list_create() {
-	return (list_t){NULL, NULL, 0};
+List list_create() {
+	return (List){NULL, NULL, 0};
 }
 
-list_iterator_t list_iterator_next(list_iterator_t iter) {
+ListIterator list_iterator_next(ListIterator iter) {
 	if (iter && iter->next)
 		return iter->next;
 	else
 		return NULL;
 }
 
-list_iterator_t list_iterator_prev(list_iterator_t iter) {
+ListIterator list_iterator_prev(ListIterator iter) {
 	if (iter && iter->prev)
 		return iter->prev;
 	else
 		return NULL;
 }
 
-list_iterator_t list_begin(list_t* self) {
+ListIterator list_begin(List* self) {
 	if (self && self->front)
 		return self->front;
 	else
 		return NULL;
 }
 
-list_iterator_t list_end(list_t* self) {
+ListIterator list_end(List* self) {
 	if (self && self->back)
 		return self->back;
 	else
 		return NULL;
 }
 
-int list_push_front(list_t* self, list_node_t* node) {
+int list_push_front(List* self, ListNode* node) {
 	if (!self || !node)
 		return 0;
 
@@ -54,7 +54,7 @@ int list_push_front(list_t* self, list_node_t* node) {
 	return LIST_OK;
 }
 
-int list_push_back(list_t* self, list_node_t* node) {
+int list_push_back(List* self, ListNode* node) {
 	if (!self || !node)
 		return 0;
 
@@ -76,11 +76,11 @@ int list_push_back(list_t* self, list_node_t* node) {
 	return LIST_OK;
 }
 
-int list_pop_front(list_t* self) {
+int list_pop_front(List* self) {
 	if (!self || !self->front)
 		return 0;
 
-	list_node_t* pop_node = self->front;
+	ListNode* pop_node = self->front;
 
 	// set the list
 	self->front = pop_node->next;
@@ -96,11 +96,11 @@ int list_pop_front(list_t* self) {
 	return LIST_OK;
 }
 
-int list_pop_back(list_t* self) {
+int list_pop_back(List* self) {
 	if (!self || !self->back)
 		return 0;
 
-	list_node_t* pop_node = self->back;
+	ListNode* pop_node = self->back;
 
 	// set the list
 	self->back = pop_node->prev;
@@ -116,7 +116,7 @@ int list_pop_back(list_t* self) {
 	return LIST_OK;
 }
 
-int list_insert(list_t* self, list_iterator_t iter, list_node_t* node) {
+int list_insert(List* self, ListIterator iter, ListNode* node) {
 	if (!self || !iter || !node)
 		return 0;
 
@@ -135,7 +135,7 @@ int list_insert(list_t* self, list_iterator_t iter, list_node_t* node) {
 	return LIST_OK;
 }
 
-int list_erase(list_t* self, list_iterator_t iter) {
+int list_erase(List* self, ListIterator iter) {
 	if (!self || !iter)
 		return 0;
 
@@ -155,7 +155,7 @@ int list_erase(list_t* self, list_iterator_t iter) {
 	return LIST_OK;
 }
 
-int list_size(list_t* self, size_t* size) {
+int list_size(List* self, size_t* size) {
 	if (self && size) {
 		*size = self->size;
 		return LIST_OK;

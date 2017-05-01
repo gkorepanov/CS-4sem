@@ -1,8 +1,8 @@
 /* 
  * Doubly linked generic list implementation
  *
- ** Any function returns NULL or 0 in case of a failure and
- ** non-zero value otherwise.
+ ** Any function returns NULL, 0 or ListIteratorNil in case of failure
+ ** and non-zero value otherwise.
  *
  ** Interface functions intentionally named consistently with std::list.
  */
@@ -50,6 +50,9 @@ typedef struct ListIterator {
 
 const ListIterator ListIteratorNil;
 
+// check if nil
+int list_iterator_nil (ListIterator iter);
+
 // step iterator
 ListIterator list_iterator_next (ListIterator* iter);
 ListIterator list_iterator_prev (ListIterator* iter);
@@ -61,7 +64,8 @@ ListIterator list_end   (List* self);
 /* compare iterators
  * <0 : iter1 < iter2;
  * =0 : iter1 = iter2;
- * >0 : iter1 > iter2 (consistent with strcmp) 
+ * >0 : iter1 > iter2 (consistent with strcmp)
+ * ! NO ERROR REPORTING !
  */
 int list_iterator_cmp   (ListIterator iter1, ListIterator iter2);
 
@@ -83,7 +87,8 @@ int list_insert     (List* self, ListIterator iter, ListNode* node);
 int list_erase      (List* self, ListIterator iter);
 
 // store the list size in the corresponding variable
-int list_size       (List* self, size_t* size);
+// ! NO ERROR REPORTING !
+size_t list_size    (List* self);
 
 
 #endif //LIST_H

@@ -55,8 +55,17 @@ ListIterator list_iterator_prev(ListIterator* iter) {
 	return *iter;
 }
 
+ListIterator list_iterator_advance(ListIterator iter, int step) {
+	ListIterator (*step_over)(ListIterator*) =
+		((step >= 0) ? &list_iterator_next : &list_iterator_prev);
+	for (step = ((step >= 0) ? step : -step) ; step; --step)
+		(*step_over)(&iter);
+	return iter;
+}
+
+
 int list_iterator_cmp(ListIterator a, ListIterator b) {
-	return a.pos - b.pos;
+	return (a.pos == b.pos) ? 0 : ((a.pos > b.pos) ? 1 : -1);
 }
 
 ListIterator list_begin(List* self) {
@@ -169,53 +178,70 @@ int list_pop_back(List* self) {
 
 ListIterator list_insert(List* self, ListIterator iter, ListNode* node) {
 	if (!self || !node || !list_iterator_nil(iter))
-		return 0;
+		return ListIteratorNil;
 
-	if (iter.node == self->front)
-		return list_push_front(self, node);
-	else if (iter.prev == self->back)
-		return list_push_back (self, node);
+	if (iter.node == self->front) {
+		list_push_front(self, node);
+		return list_begin(self);
+	}
+	else if (iter.prev == self->back) {
+		list_push_back (self, node);
+		return list_iterator_advance(list_end(self), -1);
+	}
 
 	// connect the node
 	node->prev = iter.prev;
-	node->next = iter.next;
+	node->next = iter.node;
 
 	// set the neighbors
-	iter.node->prev->next = node;
+	node->prev->next = node;
 	iter.node->prev = node;
 	self->size += 1;
 
-	return LIST_OK;
+	// set rvalue
+	ListIterator ret_iter = (ListIterator) {
+		node->prev,
+		node,
+		node->next,
+		iter.pos
+	};
+
+	return ret_iter;
 }
 
 ListIterator list_erase(List* self, ListIterator iter) {
 	if (!self || !list_iterator_nil(iter) || iter.prev == self->back)
 		return ListIteratorNil;
 
-	ListIterator next_iter = iter;
-	list_iterator_next(&iter);
-
 	if (iter.node == self->front)
 	{
 		list_pop_front(self);
-		return next_iter;
+		return list_begin(self);
 	}
 	else if (iter.node == self->back)
 	{
 		list_pop_back(self);
-		return next_iter;
+		return list_end(self);
 	}
 
 	// set the neighbors and the list
-	if (iter.node->prev)
-		iter.node->prev->next = iter.node->next;
-	if (iter.node->next)
-		iter.node->next->prev = iter.node->prev;
+	if (iter.prev)
+		iter.prev->next = iter.next;
+	if (iter.next)
+		iter.next->prev = iter.prev;
 	self->size -= 1;
+
+	// set rvalue
+	ListIterator next_iter = (ListIterator) {
+		iter.prev,
+		iter.next,
+		iter.next ? iter.next->next : NULL,
+		iter.pos
+	};
 
 	// unlink the node
 	iter.node->prev = iter.node->next = NULL;
-	
+
 	return next_iter;
 }
 

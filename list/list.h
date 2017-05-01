@@ -54,18 +54,18 @@ const ListIterator ListIteratorNil;
 int list_iterator_nil (ListIterator iter);
 
 // step iterator
-ListIterator list_iterator_next (ListIterator* iter);
-ListIterator list_iterator_prev (ListIterator* iter);
+ListIterator list_iterator_next    (ListIterator* iter);
+ListIterator list_iterator_prev    (ListIterator* iter);
+ListIterator list_iterator_advance (ListIterator  iter, int step);
 
 // acquire iterator pointing to first (past-the-end) element
 ListIterator list_begin (List* self);
 ListIterator list_end   (List* self);
 
 /* compare iterators
- * <0 : iter1 < iter2;
- * =0 : iter1 = iter2;
- * >0 : iter1 > iter2 (consistent with strcmp)
- * ! NO ERROR REPORTING !
+ * < 0 : iter1 < iter2
+ * = 0 : iter1 = iter2
+ * > 0 : iter1 > iter2
  */
 int list_iterator_cmp   (ListIterator iter1, ListIterator iter2);
 
@@ -87,7 +87,6 @@ ListIterator list_insert (List* self, ListIterator iter, ListNode* node);
 ListIterator list_erase  (List* self, ListIterator iter);
 
 // store the list size in the corresponding variable
-// ! NO ERROR REPORTING !
 size_t list_size    (List* self);
 
 

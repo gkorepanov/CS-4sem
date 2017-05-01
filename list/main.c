@@ -49,19 +49,14 @@ void test_create() {
 }
 
 
-int get_value(ListIterator iter) {
-	return list_entry(iter.node, Sample, node)->val;
-}
 void test_print() {
 	if (!list->size)
 		return;
 
 	for (ListIterator i = list_begin(list);
 			list_iterator_cmp(i, list_end(list)); list_iterator_next(&i))
-		printf("%d ", get_value(i));
+		printf("%d ", list_entry(i.node, Sample, node)->val);
 	printf("\n");
-
-	// Can't do reverse order!
 }
 
 
@@ -77,85 +72,16 @@ void test_print() {
 	assert(!list_pop_##MODE(list));
 
 
-#define test_null_2(F,A,An,B,Bn)                                              \
-	assert(!F(An, Bn));                                                       \
-	assert(!F(A,  Bn));                                                       \
-	assert(!F(An, B ));
-void test_null() {
-	// Test nil iterators
-	assert(!list_iterator_nil(ListIteratorNil));
-	assert(!list_iterator_nil(list_iterator_next(NULL)));
-	assert(!list_iterator_nil(list_iterator_prev(NULL)));
-	assert(!list_iterator_nil(list_begin(NULL)));
-	assert(!list_iterator_nil(list_end  (NULL)));
-
-	// Test constraints
-	ListIterator iter = list_begin(list);
-	list_iterator_prev(&iter);
-	assert(!list_iterator_nil(list_iterator_prev(&iter)));
-	iter = list_end(list);
-	assert(!list_iterator_nil(list_iterator_next(&iter)));
-	assert(!list_erase(list, list_end(list)));
-
-	// Test NULL inputs
-	assert(!list_pop_front(NULL));
-	assert(!list_pop_back (NULL));
-	assert(!list_size(NULL));
-
-	ListNode* node = &arr[0].node;
-	iter = list_begin(list);
-
-	test_null_2(list_push_front, list, NULL, node, NULL);
-	test_null_2(list_push_back,  list, NULL, node, NULL);
-	test_null_2(list_erase,      list, NULL, iter, ListIteratorNil);
-
-	assert(!list_insert(NULL, ListIteratorNil, NULL));
-	assert(!list_insert(list, ListIteratorNil, NULL));
-	assert(!list_insert(NULL, iter,            NULL));
-	assert(!list_insert(NULL, ListIteratorNil, node));
-	assert(!list_insert(list, iter,            NULL));
-	assert(!list_insert(NULL, iter,            node));
-	assert(!list_insert(list, ListIteratorNil, node));
-}
-
-
-void test_select() {
-	// Insert front/back
-	list_push_back(list, &arr[0].node);
-	assert(list_insert(list, list_begin(list), &arr[1].node)); test_size(2);
-	assert(list_insert(list, list_end(list),   &arr[2].node)); test_size(3);
-
-	// Erase front/back
-	ListIterator iter = list_end(list);
-	assert(list_erase (list, list_begin(list)));               test_size(2);
-	assert(list_erase (list, list_iterator_prev(&iter)));      test_size(1);
-
-	list_push_back(list, &arr[1].node);
-	list_push_back(list, &arr[2].node);
-	// Arbitrary nsert/erase
-	iter = list_begin(list);
-	assert(list_insert(list, list_iterator_next(&iter), &arr[3].node));
-	                                                           test_size(4);
-	assert(list_erase (list, iter));                           test_size(3);
-}
-
-
 int main() {
 	list = malloc(sizeof(list));
-	arr[0].val = 1; arr[1].val = 2;
-	arr[2].val = 3; arr[3].val = 4;
+	arr[0].val = 1; arr[1].val = 2; arr[2].val = 3;
 
 	test_create();
-
 	test_push(front);
 	test_print();
-	test_null();
 	test_pop(front);
-
 	test_push(back);
 	test_pop(back);
-
-	test_select();
 
 	free(list);
 	return 0;

@@ -167,7 +167,7 @@ int list_pop_back(List* self) {
 	return LIST_OK;
 }
 
-int list_insert(List* self, ListIterator iter, ListNode* node) {
+ListIterator list_insert(List* self, ListIterator iter, ListNode* node) {
 	if (!self || !node || !list_iterator_nil(iter))
 		return 0;
 
@@ -188,16 +188,23 @@ int list_insert(List* self, ListIterator iter, ListNode* node) {
 	return LIST_OK;
 }
 
-int list_erase(List* self, ListIterator iter) {
-	if (!self || !list_iterator_nil(iter))
-		return 0;
+ListIterator list_erase(List* self, ListIterator iter) {
+	if (!self || !list_iterator_nil(iter) || iter.prev == self->back)
+		return ListIteratorNil;
+
+	ListIterator next_iter = iter;
+	list_iterator_next(&iter);
 
 	if (iter.node == self->front)
-		return list_pop_front(self);
+	{
+		list_pop_front(self);
+		return next_iter;
+	}
 	else if (iter.node == self->back)
-		return list_pop_back(self);
-	else if (iter.prev == self->back)
-		return 0;
+	{
+		list_pop_back(self);
+		return next_iter;
+	}
 
 	// set the neighbors and the list
 	if (iter.node->prev)
@@ -209,7 +216,7 @@ int list_erase(List* self, ListIterator iter) {
 	// unlink the node
 	iter.node->prev = iter.node->next = NULL;
 	
-	return LIST_OK;
+	return next_iter;
 }
 
 size_t list_size(List* self) {

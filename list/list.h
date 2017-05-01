@@ -83,8 +83,8 @@ int list_pop_front  (List* self);
 int list_pop_back   (List* self);
 
 // insert/remove element before/at the arbitrary place
-int list_insert     (List* self, ListIterator iter, ListNode* node);
-int list_erase      (List* self, ListIterator iter);
+ListIterator list_insert (List* self, ListIterator iter, ListNode* node);
+ListIterator list_erase  (List* self, ListIterator iter);
 
 // store the list size in the corresponding variable
 // ! NO ERROR REPORTING !

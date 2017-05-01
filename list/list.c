@@ -5,24 +5,21 @@ list_t list_create() {
 }
 
 list_iterator_t list_iterator_next(list_iterator_t iter) {
-	if (iter && iter->next)
-		return iter->next;
-	else
-		return NULL;
+	return (list_iterator_t){iter.node,
+							 iter.next,
+							 iter.next ? iter.next->next : NULL,
+							 iter.pos + 1};
 }
 
 list_iterator_t list_iterator_prev(list_iterator_t iter) {
-	if (iter && iter->prev)
-		return iter->prev;
-	else
-		return NULL;
+	return (list_iterator_t){iter.node,
+						     iter.prev,
+						     iter.prev ? iter.prev->prev : NULL,
+						 	 iter.pos - 1};
 }
 
 list_iterator_t list_begin(list_t* self) {
-	if (self && self->front)
-		return self->front;
-	else
-		return NULL;
+	return (list_iterator_t){self && self->front ? self->front : NULL, 0};
 }
 
 list_iterator_t list_end(list_t* self) {

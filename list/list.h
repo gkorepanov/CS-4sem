@@ -42,7 +42,9 @@ list_t list_create();
  *****************************************************************************/
 
 typedef struct list_iterator_t {
-	__list_node_t* node;
+	list_node_t* prev;
+	list_node_t* node;
+	list_node_t* next;
 	size_t pos;
 } list_iterator_t;
 

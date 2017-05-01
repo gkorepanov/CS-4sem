@@ -7,11 +7,11 @@
 typedef struct {
 	int val;
 	ListNode node;
-} sample_t;
+} Sample;
 
 
 List* list;
-sample_t arr[10];
+Sample arr[10];
 
 
 size_t size;
@@ -31,25 +31,19 @@ size_t size;
 	assert(!list_end(list));                                                  \
 	test_size(0);
 
-#define test_size_1()                                                         \
-	test_size(1);                                                             \
+size_t test;
+ListNode* curr;
+#define test_list(SIZE)                                                       \
+	test_size(SIZE);                                                          \
 	test_bounds();                                                            \
-	assert(list->front == list->back);                                        \
-
-#define test_size_2()                                                         \
-	test_size(2);                                                             \
-	test_bounds();                                                            \
-	assert(list->front != list->back);                                        \
-	assert(list->front->next == list->back);                                  \
-	assert(list->back->prev  == list->front);
-
-#define test_size_3()                                                         \
-	test_size(3);                                                             \
-	test_bounds();                                                            \
-	assert(list->front != list->back);                                        \
-	assert(list->front->next->next == list->back);                            \
-	assert(list->back->prev->prev  == list->front);                           \
-	assert(list->back->prev == list->front->next);
+	curr = list->front;                                                       \
+	for (int test = 0; test < SIZE-1; ++test)                                 \
+		curr = curr->next;                                                    \
+	assert(curr == list->back);                                               \
+	curr = list->back;                                                        \
+	for (int test = 0; test < SIZE-1; ++test)                                 \
+		curr = curr->prev;                                                    \
+	assert(curr == list->front);
 
 
 void test_create() {
@@ -60,7 +54,7 @@ void test_create() {
 
 
 int get_value(ListIterator iter) {
-	return list_entry(iter, sample_t, node)->val;
+	return list_entry(iter, Sample, node)->val;
 }
 void test_print() {
 	if (!list->size)
@@ -78,17 +72,17 @@ void test_print() {
 
 #define test_push(MODE)                                                       \
 	assert(list_push_##MODE(list, &arr[0].node));                             \
-	test_size_1();                                                            \
+	test_list(1);                                                             \
 	assert(list_push_##MODE(list, &arr[1].node));                             \
-	test_size_2();                                                            \
+	test_list(2);                                                             \
 	assert(list_push_##MODE(list, &arr[2].node));                             \
-	test_size_3();
+	test_list(3);
 
 #define test_pop(MODE)                                                        \
 	assert(list_pop_##MODE(list));                                            \
-	test_size_2();                                                            \
+	test_list(2);                                                             \
 	assert(list_pop_##MODE(list));                                            \
-	test_size_1();                                                            \
+	test_list(1);                                                             \
 	assert(list_pop_##MODE(list));                                            \
 	test_empty();                                                             \
 	assert(!list_pop_##MODE(list));
@@ -128,19 +122,19 @@ void test_null() {
 void test_select() {
 	list_push_back(list, &arr[0].node);
 	assert(list_insert(list, list_begin(list), &arr[1].node));
-	test_size_2();
+	test_list(2);
 	assert(list_insert(list, list_end(list),   &arr[2].node));
-	test_size_3();
+	test_list(3);
 
 	assert(list_erase(list, list_begin(list)));
-	test_size_2();
+	test_list(2);
 	assert(list_erase(list, list_end(list)));
-	test_size_1();
+	test_list(1);
 
 	list_push_back(list, &arr[1].node);
 	list_push_back(list, &arr[0].node);
 	assert(list_erase(list, list_iterator_next(list_begin(list))));
-	test_size_2();
+	test_list(2);
 }
 
 

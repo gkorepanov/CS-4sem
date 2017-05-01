@@ -19,14 +19,23 @@ list_iterator_t list_iterator_prev(list_iterator_t iter) {
 }
 
 list_iterator_t list_begin(list_t* self) {
-	return (list_iterator_t){self && self->front ? self->front : NULL, 0};
+	if(self && self->front)
+		return (list_iterator_t){NULL,
+		                         self->front,
+		                         self->front->next,
+		                         0};
+	else
+		return (list_iterator_t){NULL,
+								 NULL,
+								 NULL,
+								 0};
 }
 
 list_iterator_t list_end(list_t* self) {
-	if (self && self->back)
-		return self->back;
-	else
-		return NULL;
+	return (list_iterator_t){(self && self->back) ? self->back : NULL,
+		                     NULL,
+		                     NULL,
+		                     self.size};
 }
 
 int list_push_front(list_t* self, list_node_t* node) {

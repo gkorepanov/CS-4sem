@@ -25,32 +25,41 @@
  *                               MAIN STRUCTURES                             *
  *****************************************************************************/
 
-struct __list_node_t {
-	struct __list_node_t *prev, *next;
-};
-typedef struct __list_node_t list_node_t; // to avoid circular reference
+typedef struct list_node_t {
+	struct list_node_t *prev, *next;
+} list_node_t;
 
 typedef struct {
 	list_node_t *front, *back;
 	size_t size;
 } list_t;
 
-list_t list_create  ();
+list_t list_create();
 
 
 /*****************************************************************************
  *                            ITERATOR DECLARATIONS                          *
  *****************************************************************************/
 
-typedef list_node_t* list_iterator_t;
+typedef struct list_iterator_t {
+	__list_node_t* node;
+	size_t pos;
+} list_iterator_t;
 
 // step iterator
 list_iterator_t list_iterator_next (list_iterator_t iter);
 list_iterator_t list_iterator_prev (list_iterator_t iter);
 
-// acquire iterator pointing to first (last) element
+// acquire iterator pointing to first (past-the-end) element
 list_iterator_t list_begin (list_t* self);
 list_iterator_t list_end   (list_t* self);
+
+/* compare iterators
+ * <0 : iter1 < iter2;
+ * =0 : iter1 = iter2;
+ * >0 : iter1 > iter2 (consistent with strcmp) 
+ */
+int list_iterator_cmp      (list_iterator_t iter1, list_iterator_t iter2);
 
 
 /*****************************************************************************

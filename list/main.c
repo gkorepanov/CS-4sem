@@ -6,11 +6,11 @@
 
 typedef struct {
 	int val;
-	list_node_t node;
+	ListNode node;
 } sample_t;
 
 
-list_t* list;
+List* list;
 sample_t arr[10];
 
 
@@ -59,18 +59,18 @@ void test_create() {
 }
 
 
-int get_value(list_iterator_t iter) {
+int get_value(ListIterator iter) {
 	return list_entry(iter, sample_t, node)->val;
 }
 void test_print() {
 	if (!list->size)
 		return;
 
-	for (list_iterator_t i = list_begin(list); i; i = list_iterator_next(i))
+	for (ListIterator i = list_begin(list); i; i = list_iterator_next(i))
 		printf("%d ", get_value(i));
 	printf(" ");
 
-	for (list_iterator_t i = list_end(list);   i; i = list_iterator_prev(i))
+	for (ListIterator i = list_end(list);   i; i = list_iterator_prev(i))
 		printf("%d ", get_value(i));
 	printf("\n");
 }
@@ -108,7 +108,7 @@ void test_null() {
 	assert(!list_pop_front(NULL));
 	assert(!list_pop_back(NULL));
 
-	list_node_t* node = &arr[0].node;
+	ListNode* node = &arr[0].node;
 
 	test_null_2(list_push_front, list, node);
 	test_null_2(list_push_back,  list, node);

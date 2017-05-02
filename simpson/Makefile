@@ -2,12 +2,13 @@
 
 TARGET = ./integral
 FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -pthread
+LIBS = -lm -pthread
 OBJS = integral.o
 DEPS = $(OBJS:.o=.d)
 
 
 $(TARGET): $(OBJS)
-	gcc -o $@ $^
+	gcc -o $@ $^ $(LIBS)
 
 -include $(DEPS)
 

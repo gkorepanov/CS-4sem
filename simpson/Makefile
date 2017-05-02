@@ -1,7 +1,7 @@
 .PHONY: clean run
 
 TARGET = ./integral
-FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g
+FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -pthread
 OBJS = integral.o
 DEPS = $(OBJS:.o=.d)
 
@@ -20,7 +20,7 @@ clean:
 	@find . -name "*.d" | xargs rm
 
 run:
-	$(TARGET) test.txt
+	$(TARGET) 1 2 1
 
 debug: FLAGS += -DDEBUG
 debug: $(TARGET)

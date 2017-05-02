@@ -51,7 +51,7 @@ void arg_process(int argc, char** argv) {
 
 // Simpson integration
 #define FUNC(x) (((x) == 0) ? 1 : (sin(x)/(x)))
-#define DEFAULT_SPLIT 33554432  // =2**25
+#define DEFAULT_SPLIT 4194304
 
 void* simpson(void* args) {
 	unsigned steps = DEFAULT_SPLIT/N;

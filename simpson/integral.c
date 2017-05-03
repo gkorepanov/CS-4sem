@@ -13,12 +13,12 @@
 
 
 pthread_t* threads;
-long double a, b;
-unsigned N;
+long double a, b, h, h2;
+unsigned N, steps;
 
 // field 'a' is used as thread rvalue
 typedef struct SimpsonData {
-	long double a, b;
+	long double a;
 	int core_id;
 } SimpsonData;
 SimpsonData* data;
@@ -54,23 +54,28 @@ void arg_process(int argc, char** argv) {
 #define DEFAULT_SPLIT 4194304
 
 void* simpson(void* args) {
-	unsigned steps = DEFAULT_SPLIT/N;
-
-	long double  a = ((SimpsonData*)args)->a,
-			     h = (((SimpsonData*)args)->b - a)/steps,
-			     h2 = h/2,
-			     acc = 0;
 	int core_id = ((SimpsonData*)args)->core_id;
 	if(stick_this_thread_to_core(core_id))
-		ERROR("Sticking thread to specific core failed.")
+		ERROR("Sticking thread to specific core failed.");
+
+	long double a = ((SimpsonData*)args)->a,
+				b = a + h2,
+				c = a + h,
+				func_a = FUNC(a),
+				func_c,
+				sum = 0;
 
 	for (unsigned i = 0; i < steps; ++i) {
-		acc += FUNC(a) + 4 * FUNC(a + h2) + FUNC(a + h);
-		a += h;
+		func_c = FUNC(c);
+		sum += func_a + 4 * FUNC(b) + func_c;
+		func_a = func_c;
+		a = c;
+		b += h;
+		c += h;
 	}
 
 	long double* rvalue = &((SimpsonData*)args)->a;
-	*rvalue = acc * h/6;
+	*rvalue = sum * h/6;
     pthread_exit(rvalue);
 }
 
@@ -83,14 +88,25 @@ int main(int argc, char** argv) {
 
 	// get number of online cores
 	long cores_num = sysconf(_SC_NPROCESSORS_ONLN);
+
+
+	steps = DEFAULT_SPLIT/N;
+	h = (b - a) / DEFAULT_SPLIT;
+	h2 = h/2;
+	interval_len = (b - a)/N;
 	
 	// A time to take stones away...
-	for (unsigned int i = 0; i < N; ++i) {
+	unsigned int i;
+	long double interval_start;
+	for (i = 0, interval_start = a;
+	i < N;
+	++i, interval_start += interval_len) {
+
 		data[i] = (SimpsonData) {
-			a + (b - a)/N * i,
-			a + (b - a)/N * (i+1),
+			interval_start,
 			i % cores_num
 		};
+
 		if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
 			ERROR("Thread creation failed");
 	}

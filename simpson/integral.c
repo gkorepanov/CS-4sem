@@ -106,13 +106,15 @@ int main(int argc, char** argv) {
 	char* saveptr2 = NULL;
 	char* str;
 
-	while((str = strtok_r(online_str, ",", &saveptr1))) {
+	str = strtok_r(online_str, ",", &saveptr1);
+
+	do {
 		str = strtok_r(str, "-", &saveptr2);
 		if (!sscanf(str, "%u", &left_bound))
 			ERROR("Failed to parse online cores file");
 		right_bound = left_bound;
 
-		str = strtok_r(str, "-", &saveptr2);
+		str = strtok_r(NULL, "-", &saveptr2);
 		if (str) {
 			if (!sscanf(str, "%u", &right_bound))
 			ERROR("Failed to parse online cores file");
@@ -121,13 +123,13 @@ int main(int argc, char** argv) {
 		// update table
 		for (unsigned int i = left_bound; i <= right_bound; i++)
 			is_virtual_cpu_online[i] = 1;
-	}
+	} while ((str = strtok_r(NULL, ",", &saveptr1)));
 
 	// log
 	PRINT("Online virtual cores:")
 	for (unsigned int i = 0; i < MAX_CPUS; i++) {
 		if (is_virtual_cpu_online[i])
-			printf("%d ", i);
+			PRINT("%d ", i);
 	}
 
 
@@ -151,9 +153,11 @@ int main(int argc, char** argv) {
 	int core_id;
 
 	for (unsigned int i = 0; i < MAX_CPUS; i++) {
+		if (!is_virtual_cpu_online[i])
+			continue;
 
 		// read the corresponding physical core number
-		sprintf(filename, "/sys/devices/system/cpu/online/cpu/cpu%d/topology/core_id", i);
+		sprintf(filename, "/sys/devices/system/cpu/cpu%d/topology/core_id", i);
 		ERRTEST(fd = open(filename, O_RDONLY));
 		ERRTEST(read(fd, core_str, 10));
 		close(fd);

@@ -1,44 +1,82 @@
 #ifndef ALERTS_H
 #define ALERTS_H
 
-#include <errno.h>   // errno // guess why
-#include <stdlib.h>  // just because
-#include <string.h>  // strerror
-#include <stdio.h>   // fprintf
-#include <unistd.h>  // getpid
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include "colors.h"
 
-#define RESET   "\033[0m"
-#define YELLOW    "\033[1m\033[33m"
-#define RED     "\x1b[31m"
-#define ERR(...)\
+// Messages
+#define OK     BOLD GREEN  "[OK]  "    NORM
+#define ERR    BOLD RED    "[ERROR]  " NORM
+#define EXIT   BOLD YELLOW "[EXIT]  "  NORM
+#define SPACE              "      "
+#define LINEUP             "\033[A"
+
+#ifdef  MSGPID
+  #define ERROR(...)\
+  {\
+    fprintf(stderr, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
+    fprintf(stderr, __VA_ARGS__);\
+    putc   ('\n', stderr);\
+    exit   (EXIT_FAILURE);\
+  }
+
+  #define ERRORV(...)\
+  {\
+      fprintf(stderr, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
+      fprintf(stderr, __VA_ARGS__);\
+      putc   ('\n', stderr);\
+      fprintf(stderr, "\nERRNO: %s\n", strerror(errno));\
+      putc   ('\n', stderr);\
+      exit   (EXIT_FAILURE);\
+  }
+
+  #ifdef DEBUG
+    #define PRINT(...)\
     {\
-        fprintf(stderr, YELLOW "[PID %05d] " RESET RED "ERR [LINE %05d] " RESET, getpid(), __LINE__);\
-        fprintf(stderr, __VA_ARGS__);\
-        fprintf(stderr, "\nERRNO: %s\n", strerror(errno));\
-        fflush(stderr);\
-        exit(EXIT_FAILURE);\
+      fprintf(stdout, YELLOW "PID %d:  " NORM, getpid());\
+      fprintf(stdout, __VA_ARGS__);\
+      putc   ('\n', stderr);\
     }
+  #else  // DEBUG
+    #define PRINT(...)
+  #endif // DEGUG
+
+#else  // MSGPID
+  #define ERROR(...)\
+  {\
+    fprintf(stderr, ERR UL "@%d" UN_UL "  ", __LINE__);\
+    fprintf(stderr, __VA_ARGS__);\
+    putc   ('\n', stderr);\
+    exit   (EXIT_FAILURE);\
+  }
+
+  #define ERRORV(...)\
+  {\
+    fprintf(stderr, ERR UL "@%d" UN_UL "  ", __LINE__);\
+    fprintf(stderr, __VA_ARGS__);\
+    putc   ('\n', stderr);\
+    fprintf(stderr, "\nERRNO: %s\n", strerror(errno));\
+    putc   ('\n', stderr);\
+    exit   (EXIT_FAILURE);\
+  }
+
+  #ifdef DEBUG
+    #define PRINT(...)\
+    {\
+      fprintf(stdout, LBLUE);\
+      fprintf(stdout, __VA_ARGS__);\
+      fprintf(stdout, NORM "\n");\
+    }
+  #else  // DEBUG
+    #define PRINT(...)
+  #endif // DEGUG
+#endif // MSGPID
+
 
 #define ERRTEST(...) \
     if ((__VA_ARGS__) == -1) \
-        ERR("Code line: [" #__VA_ARGS__ "]")
+        ERRORV("Code line: [" #__VA_ARGS__ "]")
 
-#ifdef DEBUG
-
-#define PRINT(...)\
-    {\
-        printf(YELLOW "[PID %05d] MSG [LINE %05d] " RESET, getpid(), __LINE__);\
-        printf(__VA_ARGS__);\
-        printf("\n");\
-        fflush(stdout);\
-    }
-
-#else
-
-#define PRINT(...) {};
-
-#endif
-
-#endif
-
-
+#endif // ALERTS_H

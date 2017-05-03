@@ -1,6 +1,6 @@
 rm log.txt;
 
-for cpus in {1..50};
+for cpus in {1..16};
 do
     echo -n -e "$cpus " >> log.txt;
     SUM=0;

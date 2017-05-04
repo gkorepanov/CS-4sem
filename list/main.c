@@ -55,7 +55,7 @@ void test_print() {
 
 	for (ListIterator i = list_begin(list);
 			list_iterator_cmp(i, list_end(list)); list_iterator_next(&i))
-		printf("%d ", list_entry(i.node, Sample, node)->val);
+		printf("%d ", *(int*)list_entry(i));
 	printf("\n");
 }
 

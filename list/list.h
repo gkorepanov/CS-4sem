@@ -13,11 +13,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-
-// conscientiously borrowed from Linux kernel
-#define list_entry(ptr, type, member) \
-    ((type *)((char *)(ptr) - offsetof(type, member)))
-
 #define LIST_OK  0xE2E4 // for chess fans
 
 
@@ -63,11 +58,14 @@ ListIterator list_begin (List* self);
 ListIterator list_end   (List* self);
 
 /* compare iterators
- * < 0 : iter1 < iter2
+ * > 0 : iter1 < iter2	forward
  * = 0 : iter1 = iter2
- * > 0 : iter1 > iter2
+ * < 0 : iter1 > iter2	backward
  */
-int list_iterator_cmp   (ListIterator iter1, ListIterator iter2);
+int   list_iterator_cmp (ListIterator iter1, ListIterator iter2);
+void* list_entry        (ListIterator iter);
+void  list_for_each     (ListIterator iter1, ListIterator iter2,
+                         void (*func)(void*));
 
 
 /*****************************************************************************

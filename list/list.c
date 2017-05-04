@@ -10,12 +10,8 @@ List list_create() {
 	};
 }
 
-const ListIterator ListIteratorNil = (ListIterator) {
-	NULL,
-	NULL,
-	NULL,
-	0
-};
+
+const ListIterator ListIteratorNil = {NULL, NULL, NULL, 0};
 
 int list_iterator_nil(ListIterator iter) {
 	return (iter.prev || iter.node || iter.prev || iter.pos);
@@ -63,9 +59,22 @@ ListIterator list_iterator_advance(ListIterator iter, int step) {
 	return iter;
 }
 
-
 int list_iterator_cmp(ListIterator a, ListIterator b) {
 	return (a.pos == b.pos) ? 0 : ((a.pos > b.pos) ? 1 : -1);
+}
+
+void* list_entry(ListIterator iter) {
+	return (void*)iter.node;
+}
+
+void list_for_each(ListIterator iter1, ListIterator iter2,
+	               void (*func)(void*)) {
+	ListIterator (*step_over)(ListIterator*) =
+		((list_iterator_cmp(iter1, iter2) >= 0)
+			? &list_iterator_next
+			: &list_iterator_prev);
+	for (; list_iterator_cmp(iter1, iter2); (*step_over)(&iter1))
+		(*func)(list_entry(iter1));
 }
 
 ListIterator list_begin(List* self) {
@@ -91,6 +100,7 @@ ListIterator list_end(List* self) {
 	else
 		return ListIteratorNil;
 }
+
 
 int list_push_front(List* self, ListNode* node) {
 	if (!self || !node)
@@ -175,6 +185,7 @@ int list_pop_back(List* self) {
 
 	return LIST_OK;
 }
+
 
 ListIterator list_insert(List* self, ListIterator iter, ListNode* node) {
 	if (!self || !node || !list_iterator_nil(iter))

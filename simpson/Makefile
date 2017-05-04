@@ -1,4 +1,4 @@
-.PHONY: clean run
+.PHONY: clean
 
 TARGET = ./integral
 FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -pthread -O3
@@ -19,9 +19,6 @@ $(TARGET): $(OBJS)
 clean:
 	@rm $(OBJS) $(TARGET)
 	@find . -name "*.d" | xargs rm
-
-run:
-	$(TARGET) 1 2 1
 
 debug: FLAGS += -DDEBUG
 debug: $(TARGET)

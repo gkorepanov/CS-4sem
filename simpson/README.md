@@ -1,1 +1,3 @@
-# Integral calculator (via simpson's method), supposed to be paralleled with 95% accuracy
+# Integral calculator
+Uses Simpson's rule for numerical integration.  
+Supposed to be paralleled with **95%** accuracy

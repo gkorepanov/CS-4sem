@@ -1,25 +1,26 @@
-rm log.txt;
+LOG_FILE="log.txt"
+rm "$LOG_FILE";
 
-for ((cpus=$1;cpus<=$2;cpus++));
+for ((cpus=$1; cpus<=$2; cpus++));
 do
-    echo -n -e "$cpus " >> log.txt;
-    SUM=0;
-    RUNS=$3;
-    echo "Running for $cpus threads ($RUNS runs)";
+    echo -n -e "$cpus " >> "$LOG_FILE";
+    SUM=0; RUNS=$3;
+    echo "Running: $RUNS times @ $cpus threads";
 
-    for ((n=0;n<$RUNS;n++));
+    for ((n=0; n<$RUNS; n++));
     do
         echo -n "run $n: ";
         TIME="$( { /usr/bin/time -f "%e" ./integral -1 1 $cpus > /dev/null; } 2>&1 )";
-        SUM=$(python -c "print($TIME+$SUM)");
+        SUM=$(python -c "print($TIME + $SUM)");
         echo $TIME;
         sleep 1;
     done
 
-    AVG_TIME=$(python -c "print(float($SUM)/$RUNS)");
-    FULL_TIME=$(python -c "print(float($AVG_TIME)*$cpus)");
-    echo -e "Average time: $AVG_TIME\n";
-    echo -e "Time*N:\033[33m $FULL_TIME\033[39m\n";
-    echo "$AVG_TIME" >> log.txt;
+    AVG_TIME=$(python -c "print(round(float($SUM)/$RUNS, 2))");
+    EXE_TIME=$(python -c "print(round(float($SUM)/$RUNS*$cpus, 2))");
+
+    echo -e "Avg time: $AVG_TIME";
+    echo -e "Exe time: \033[33m${EXE_TIME}\033[39m\n";
+    echo $AVG_TIME >> "$LOG_FILE";
 done
 

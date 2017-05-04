@@ -9,7 +9,7 @@ rm "$LOG_FILE" > /dev/null 2>&1;
 
 for ((cpus=$1; cpus<=$2; cpus++));
 do
-    echo -n -e "$cpus " >> "$LOG_FILE";
+    echo -n -e "$cpus\t" >> "$LOG_FILE";
     SUM=0; RUNS=$3;
     echo "Running $RUNS times @ $cpus threads";
 
@@ -27,6 +27,6 @@ do
 
     echo -e "Avg time: $AVG_TIME";
     echo -e "Exe time: \033[33m${EXE_TIME}\033[39m\n";
-    echo $AVG_TIME >> "$LOG_FILE";
+    echo -e "$AVG_TIME\t$EXE_TIME" >> "$LOG_FILE";
 done
 

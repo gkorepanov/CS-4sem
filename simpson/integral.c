@@ -42,19 +42,24 @@ void arg_process(int argc, char** argv) {
 }
 
 
+
 // Simpson integration
 #define FUNC(x) (((x) == 0) ? 1 : (sin(x)/(x)))
-#define DEFAULT_SPLIT 4194304
+#define DEFAULT_SPLIT 50000000
 
 void* simpson(void* args) {
+
 	cpu_set_t cpuset = ((SimpsonData*)args)->cpuset;
 	pthread_t current_thread = pthread_self();
    	if(pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset))
 		ERROR("Sticking thread to specific core failed.");
 
+	long double lh = h;
+	long double lh2 = h2;
+
 	long double a = ((SimpsonData*)args)->a,
-				b = a + h2,
-				c = a + h,
+				b = a + lh2,
+				c = a + lh,
 				func_a = FUNC(a),
 				func_c,
 				sum = 0;
@@ -64,8 +69,8 @@ void* simpson(void* args) {
 		sum += func_a + 4 * FUNC(b) + func_c;
 		func_a = func_c;
 		a = c;
-		b += h;
-		c += h;
+		b += lh;
+		c += lh;
 	}
 
 	long double* rvalue = &((SimpsonData*)args)->a;
@@ -125,14 +130,6 @@ int main(int argc, char** argv) {
 			is_virtual_cpu_online[i] = 1;
 	} while ((str = strtok_r(NULL, ",", &saveptr1)));
 
-	// log
-	PRINT("Online virtual cores:")
-	for (unsigned int i = 0; i < MAX_CPUS; i++) {
-		if (is_virtual_cpu_online[i])
-			PRINT("%d ", i);
-	}
-
-
 
 	/*****************************************************************************
 	 *                      ACQUIRING THREAD SIBLINGS LISTS                      *
@@ -144,7 +141,7 @@ int main(int argc, char** argv) {
 	cpu_set_t cpu_sets[MAX_CPUS];
 
 	memset(&is_cpu_online, 0, sizeof(is_cpu_online));
-	for (unsigned int i; i < MAX_CPUS; i++) 
+	for (unsigned int i = 0; i < MAX_CPUS; i++)
 		CPU_ZERO(&cpu_sets[i]);
 
 	unsigned int online_cpus_num = 0;
@@ -152,7 +149,7 @@ int main(int argc, char** argv) {
 	char core_str[10];
 	int core_id;
 
-	for (unsigned int i = 0; i < MAX_CPUS; i++) {
+	for (int i = 0; i < MAX_CPUS; i++) {
 		if (!is_virtual_cpu_online[i])
 			continue;
 
@@ -170,18 +167,18 @@ int main(int argc, char** argv) {
 		if (!is_cpu_online[core_id]) {
 			is_cpu_online[core_id] = 1;
 			online_cpus_num++;
-		}
 
-		// add virtual cpu to physical one
-		CPU_SET(core_id, &cpu_sets[core_id]);
+			// add virtual cpu to physical one
+			CPU_SET(i, &cpu_sets[core_id]);
+			PRINT("Adding %d virtual cpu to %d physical core", i, core_id);
+		}
 	}
 
 	if (online_cpus_num < N)
 		ERROR("THe number of physical cores online is less than requested number of threads");
 
-	if (!(threads = malloc(N * sizeof(pthread_t))) || !(data = malloc(N * sizeof(SimpsonData))))
+	if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) || !(data = malloc(online_cpus_num * sizeof(SimpsonData))))
 		ERROR("Memory allocation failed");
-
 
 
 	/*****************************************************************************
@@ -200,9 +197,12 @@ int main(int argc, char** argv) {
 	unsigned int j = 0;
 	long double interval_start;
 
+	// running the calculation on every physical core, but
+	// some threads are "fake" and are not actually used so that
+	// all the cores are loaded and Intel Turbo Boost don't distort the results
 
 	for (i = 0, interval_start = a;
-	i < N;
+	i < online_cpus_num;
 	++i, interval_start += interval_len) {
 
 		// find next online physical core
@@ -213,10 +213,12 @@ int main(int argc, char** argv) {
 			cpu_sets[j]
 		};
 
+		PRINT("Running thread on core %u", j)
+
 		j++;
 	}
 
-	for (i = 0; i < N; i++) {
+	for (i = 0; i < online_cpus_num; i++) {
 		if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
 			ERROR("Thread creation failed");
 	}
@@ -228,6 +230,11 @@ int main(int argc, char** argv) {
 			ERROR("Thread joining failed");
 		S += *r;
 	}
+	for (unsigned i = N; i < online_cpus_num; ++i) {
+		if (pthread_join(threads[i], (void**) &r))
+			ERROR("Thread joining failed");
+	}
+
 	printf("%.18Lf\n", S);
 
 	free(threads);

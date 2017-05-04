@@ -1,7 +1,7 @@
 .PHONY: clean run
 
 TARGET = ./integral
-FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -pthread
+FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -pthread -O3
 LIBS = -lm -pthread
 OBJS = integral.o
 DEPS = $(OBJS:.o=.d)

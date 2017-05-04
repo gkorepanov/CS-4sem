@@ -1,11 +1,17 @@
+if [[ $# -ne 3 ]];
+then
+    echo "Usage: $0 [MIN threads] [MAX threads] [NUM of runs]";
+    exit 1;
+fi
+
 LOG_FILE="log.txt"
-rm "$LOG_FILE";
+rm "$LOG_FILE" > /dev/null 2>&1;
 
 for ((cpus=$1; cpus<=$2; cpus++));
 do
     echo -n -e "$cpus " >> "$LOG_FILE";
     SUM=0; RUNS=$3;
-    echo "Running: $RUNS times @ $cpus threads";
+    echo "Running $RUNS times @ $cpus threads";
 
     for ((n=0; n<$RUNS; n++));
     do

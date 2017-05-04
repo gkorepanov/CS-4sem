@@ -14,7 +14,7 @@
 
 
 #define FUNC(x) x*x/(1/x+x-2+x*x)*x
-#define DEFAULT_SPLIT 500000000
+#define DEFAULT_SPLIT 100000000
 
 // hope there are no more than 256 ones
 #define MAX_CPUS 256

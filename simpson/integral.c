@@ -2,33 +2,102 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "../tools/alerts.h"
-#include <unistd.h>
-#include <errno.h>
-
 #include <sched.h>
-#include <string.h>
-#include <stdio.h>
-
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include "../tools/alerts.h"
 
 
+#define FUNC(x) x*x/(1/x+x-2+x*x)*x
+#define DEFAULT_SPLIT 500000000
 
-pthread_t* threads;
-long double a, b, h, h2;
-unsigned N, steps;
+// hope there are no more than 256 ones
+#define MAX_CPUS 256
+#define MAX_SYS_FILE_LENGTH 256
 
 // field 'a' is used as thread rvalue
 typedef struct SimpsonData {
 	long double a;
 	cpu_set_t cpuset;
 } SimpsonData;
+
 SimpsonData* data;
+pthread_t* threads;
+long double a, b, h, h2;
+unsigned N, steps;
+
+int is_virtual_cpu_online[MAX_CPUS],	// flags showing whether some virtual cpu is online or not
+    is_cpu_online[MAX_CPUS];			// flags showing whether some physical core is online or not
+unsigned online_cpus_num = 0;
+cpu_set_t cpu_sets[MAX_CPUS];			// sets of virtual cpus sharing same physical core
+
+
+void arg_process(int argc, char** argv);
+void core_process();
+void* simpson(void* args);
+
+
+int main(int argc, char** argv) {
+
+	arg_process (argc, argv);			// acquire left and right bounds (a, b) and number of lines N
+	core_process();						// acquire lists of online cores and thread siblings
+
+	if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) ||
+		!(data    = malloc(online_cpus_num * sizeof(SimpsonData))))
+		ERROR("Memory allocation failed");
+
+	steps = DEFAULT_SPLIT / N;
+	h = (b - a) / DEFAULT_SPLIT;
+	h2 = h/2;
+	long double interval_start,
+                interval_len = (b - a)/N;
+	unsigned j = 0, i;
+
+	// A time to take stones away...
+
+	// running the calculation on each physical core, but
+	// some threads are "fake" and are not actually used so that
+	// all the cores are loaded and Intel Turbo Boost don't distort the results
+
+	for (i = 0, interval_start = a;
+		 i < online_cpus_num;
+		 ++i, interval_start += interval_len) {
+
+		// find next online physical core
+		while(!is_cpu_online[j]) ++j;
+
+		data[i] = (SimpsonData) {
+			interval_start,
+			cpu_sets[j]
+		};
+
+		PRINT("Running thread on core %u", j++);
+	}
+
+	for (i = 0; i < online_cpus_num; i++)
+		if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+			ERROR("Thread creation failed");
+
+	// ...and a time to get stones together
+	long double S = 0, *r;
+	for (unsigned i = 0; i < online_cpus_num; ++i) {
+		if (pthread_join(threads[i], (void**) &r))
+			ERROR("Thread joining failed");
+		if (i < N)
+			S += *r;
+	}
+
+	printf("%.12Lf\n", S);
+
+	free(threads);
+	free(data);
+	return 0;
+}
 
 
 void arg_process(int argc, char** argv) {
@@ -42,74 +111,20 @@ void arg_process(int argc, char** argv) {
 }
 
 
-
-// Simpson integration
-#define FUNC(x) x*x/(1/x+x-2+x*x)*x
-#define DEFAULT_SPLIT 500000000
-
-void* simpson(void* args) {
-
-	cpu_set_t cpuset = ((SimpsonData*)args)->cpuset;
-	pthread_t current_thread = pthread_self();
-   	if(pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset))
-		ERROR("Sticking thread to specific core failed.");
-
-	long double lh = h;
-	long double lh2 = h2;
-
-	long double a = ((SimpsonData*)args)->a,
-				b = a + lh2,
-				c = a + lh,
-				func_a = FUNC(a),
-				func_c,
-				sum = 0;
-
-	for (unsigned i = 0; i < steps; ++i) {
-		func_c = FUNC(c);
-		sum += func_a + 4 * FUNC(b) + func_c;
-		func_a = func_c;
-		a = c;
-		b += lh;
-		c += lh;
-	}
-
-	long double* rvalue = &((SimpsonData*)args)->a;
-	*rvalue = sum * h/6;
-    pthread_exit(rvalue);
-}
-
-// hope there are no more than 256 ones
-#define MAX_CPUS 256
-
-#define MAX_SYS_FILE_LENGTH 256
-
-int main(int argc, char** argv) {
-
-	// acquire left and right bounds (a, b) and number of lines N
-	arg_process(argc, argv);
-
-	/*****************************************************************************
-	 *                 ACQUIRING LIST OF ONLINE VIRTUAL CORES                    *
-	 *****************************************************************************/
-
-	// flags showing whether some virtual cpu is online or not
-	int is_virtual_cpu_online[MAX_CPUS];
+void core_process() {
+	// ACQUIRING LIST OF ONLINE VIRTUAL CORES
 	memset(&is_virtual_cpu_online, 0, sizeof(is_virtual_cpu_online));
 
-	// read file
 	int fd;
 	ERRTEST(fd = open("/sys/devices/system/cpu/online", O_RDONLY));
-
 	char online_str[MAX_SYS_FILE_LENGTH];
 	ERRTEST(read(fd, online_str, MAX_SYS_FILE_LENGTH));
-
 	close(fd);
 
-	// parse string
-	unsigned int left_bound, right_bound;
-	char* saveptr1 = NULL;
-	char* saveptr2 = NULL;
-	char* str;
+	unsigned left_bound, right_bound;
+	char *saveptr1 = NULL,
+         *saveptr2 = NULL,
+         *str;
 
 	str = strtok_r(online_str, ",", &saveptr1);
 
@@ -122,32 +137,23 @@ int main(int argc, char** argv) {
 		str = strtok_r(NULL, "-", &saveptr2);
 		if (str) {
 			if (!sscanf(str, "%u", &right_bound))
-			ERROR("Failed to parse online cores file");
+				ERROR("Failed to parse online cores file");
 		}
 
 		// update table
-		for (unsigned int i = left_bound; i <= right_bound; i++)
+		for (unsigned i = left_bound; i <= right_bound; i++)
 			is_virtual_cpu_online[i] = 1;
 	} while ((str = strtok_r(NULL, ",", &saveptr1)));
 
 
-	/*****************************************************************************
-	 *                      ACQUIRING THREAD SIBLINGS LISTS                      *
-	 *****************************************************************************/
-
-	// flags showing whether some physical core is online or not
-	int is_cpu_online[MAX_CPUS];
-	// sets of virtual cpus sharing same physical core
-	cpu_set_t cpu_sets[MAX_CPUS];
-
+	// ACQUIRING THREAD SIBLINGS LISTS
 	memset(&is_cpu_online, 0, sizeof(is_cpu_online));
-	for (unsigned int i = 0; i < MAX_CPUS; i++)
+	for (unsigned i = 0; i < MAX_CPUS; i++)
 		CPU_ZERO(&cpu_sets[i]);
 
-	unsigned int online_cpus_num = 0;
-	char filename[256];
-	char core_str[10];
-	int core_id;
+	char filename[256],
+	     core_str[10];
+	int  core_id;
 
 	for (int i = 0; i < MAX_CPUS; i++) {
 		if (!is_virtual_cpu_online[i])
@@ -168,75 +174,44 @@ int main(int argc, char** argv) {
 			is_cpu_online[core_id] = 1;
 			online_cpus_num++;
 
-			// add virtual cpu to physical one
+			// binding virtual cpu to physical one
 			CPU_SET(i, &cpu_sets[core_id]);
-			PRINT("Adding %d virtual cpu to %d physical core", i, core_id);
+			PRINT("Binding %d virtual cpu to %d physical core", i, core_id);
 		}
 	}
 
 	if (online_cpus_num < N)
-		ERROR("THe number of physical cores online is less than requested number of threads");
-
-	if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) || !(data = malloc(online_cpus_num * sizeof(SimpsonData))))
-		ERROR("Memory allocation failed");
+		ERROR("The number of physical cores online is less than requested number of threads");
+}
 
 
-	/*****************************************************************************
-	 *                                 CALCULATION                               *
-	 *****************************************************************************/
+// Simpson integration
+void* simpson(void* args) {
+	cpu_set_t cpuset = ((SimpsonData*)args)->cpuset;
+	pthread_t current_thread = pthread_self();
+	if (pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset))
+		ERROR("Sticking thread to specific core failed");
 
-	// prepare variables for calculation
+	// Locals
+	long double lh = h,
+                lh2 = h2,
+                a = ((SimpsonData*)args)->a,
+                b = a + lh2,
+                c = a + lh,
+                func_a = FUNC(a),
+                func_c,
+                sum = 0;
 
-	steps = DEFAULT_SPLIT / N;
-	h = (b - a) / DEFAULT_SPLIT;
-	h2 = h/2;
-	long double interval_len = (b - a)/N;
-	
-	// A time to take stones away...
-	unsigned int i;
-	unsigned int j = 0;
-	long double interval_start;
-
-	// running the calculation on every physical core, but
-	// some threads are "fake" and are not actually used so that
-	// all the cores are loaded and Intel Turbo Boost don't distort the results
-
-	for (i = 0, interval_start = a;
-	i < online_cpus_num;
-	++i, interval_start += interval_len) {
-
-		// find next online physical core
-		for (; !is_cpu_online[j]; j++);
-
-		data[i] = (SimpsonData) {
-			interval_start,
-			cpu_sets[j]
-		};
-
-		PRINT("Running thread on core %u", j)
-
-		j++;
+	for (unsigned i = 0; i < steps; ++i) {
+		func_c = FUNC(c);
+		sum += func_a + 4 * FUNC(b) + func_c;
+		func_a = func_c;
+		a  = c;
+		b += lh;
+		c += lh;
 	}
 
-	for (i = 0; i < online_cpus_num; i++) {
-		if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
-			ERROR("Thread creation failed");
-	}
-
-	// ...and a time to get stones together
-	long double S = 0, *r;
-	for (unsigned i = 0; i < N; ++i) {
-		if (pthread_join(threads[i], (void**) &r))
-			ERROR("Thread joining failed");
-		S += *r;
-	}
-	for (unsigned i = N; i < online_cpus_num; ++i) {
-		if (pthread_join(threads[i], (void**) &r))
-			ERROR("Thread joining failed");
-	}
-
-	printf("%.18Lf\n", S);
-
-	free(threads);
-	return 0;
+	long double* rvalue = &((SimpsonData*)args)->a;
+	*rvalue = sum * h/6;
+    pthread_exit(rvalue);
 }

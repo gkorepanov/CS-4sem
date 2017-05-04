@@ -18,7 +18,6 @@
 #include <fcntl.h>
 
 
-
 pthread_t* threads;
 long double a, b, h, h2;
 unsigned N, steps;

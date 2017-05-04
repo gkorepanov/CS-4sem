@@ -44,8 +44,8 @@ void arg_process(int argc, char** argv) {
 
 
 // Simpson integration
-#define FUNC(x) (((x) == 0) ? 1 : (sin(x)/(x)))
-#define DEFAULT_SPLIT 50000000
+#define FUNC(x) x*x/(1/x+x-2+x*x)*x
+#define DEFAULT_SPLIT 500000000
 
 void* simpson(void* args) {
 

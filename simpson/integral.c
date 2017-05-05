@@ -52,19 +52,22 @@ int main(int argc, char** argv) {
     arg_process(argc, argv);               // acquire left and right bounds (a, b) and number of lines N
     cpu_process();                         // acquire lists of online cores and thread siblings
 
-    if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) ||
+       
+    if (!use_hyper) {
+
+        if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) ||
         !(data = malloc(online_cpus_num * sizeof(SimpsonData))))
         ERROR("Memory allocation failed");
 
-    // prepare variables for calculation
-    steps = DEFAULT_SPLIT / N;
-    h = (b - a) / DEFAULT_SPLIT;
-    h2 = h/2;
-    long double interval_start,
-                interval_len = (b - a)/N;
-    unsigned j = 0, i;
-    
-    if (!use_hyper) {
+        // prepare variables for calculation
+        steps = DEFAULT_SPLIT / N;
+        h = (b - a) / DEFAULT_SPLIT;
+        h2 = h/2;
+        long double interval_start,
+                    interval_len = (b - a)/N;
+        unsigned j = 0, i;
+
+
         for (i = 0, interval_start = a;
              i < online_cpus_num;
              ++i, interval_start += interval_len, j++) {
@@ -98,13 +101,23 @@ int main(int argc, char** argv) {
         printf("%.12Lf\n", S);
     }
     else {
-        for (unsigned i = 0, interval_start = a;
+
+
+        if (!(threads = malloc(online_virtual_cpus_num * sizeof(pthread_t))) ||
+        !(data = malloc(online_virtual_cpus_num * sizeof(SimpsonData))))
+        ERROR("Memory allocation failed");
+
+        // prepare variables for calculation
+        steps = DEFAULT_SPLIT / online_virtual_cpus_num;
+        h = (b - a) / DEFAULT_SPLIT;
+        h2 = h/2;
+        long double interval_start,
+                    interval_len = (b - a)/online_virtual_cpus_num;
+                    unsigned i;
+
+        for (i = 0, interval_start = a;
              i < online_virtual_cpus_num;
              ++i, interval_start += interval_len) {
-
-            // running the calculation on every physical core, but
-            // some threads are "fake" and are not actually used so that
-            // all the cores are loaded and Intel Turbo Boost don't distort the results
 
             data[i] = (SimpsonData) {
                 interval_start,
@@ -115,7 +128,7 @@ int main(int argc, char** argv) {
             PRINT("Running thread on virtual core %u", i);
         }
 
-        PRINT("online_virtual_cpus_num %u", online_virtual_cpus_num);
+        //PRINT("online_virtual_cpus_num %u", online_virtual_cpus_num);
         for (unsigned i = 0; i < online_virtual_cpus_num; i++)
             if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
                 ERROR("Thread creation failed");
@@ -236,9 +249,10 @@ void* simpson(void* args) {
     cpu_set_t cpuset = ((SimpsonData*)args)->cpuset;
     pthread_t current_thread = pthread_self();
        if (pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset))
-        PRINT("Sticking thread %u to specific core failed, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+            ERROR("Sticking thread %u to specific core failed, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+    
 
-    PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+    //PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
 
     long double lh = h,
                 lh2 = h2,

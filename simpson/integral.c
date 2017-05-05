@@ -31,10 +31,14 @@ pthread_t* threads;
 long double a, b, h, h2;
 unsigned N, steps;
 
+bool use_hyper = false;
+
 unsigned is_virtual_cpu_online[MAX_CPUS],  // flags showing whether some virtual cpu is online or not
          is_cpu_online[MAX_CPUS],          // flags showing whether some physical core is online or not
-         online_cpus_num = 0;
+         online_cpus_num = 0,
+         online_virtual_cpus_num = 0;
 cpu_set_t cpu_sets[MAX_CPUS];              // sets of virtual cpus sharing same physical core
+cpu_set_t virtual_cpu_sets[MAX_CPUS];
 
 
 
@@ -44,7 +48,6 @@ void* simpson(void* args);
 
 
 int main(int argc, char** argv) {
-
     arg_process(argc, argv);               // acquire left and right bounds (a, b) and number of lines N
     cpu_process();                         // acquire lists of online cores and thread siblings
 
@@ -60,39 +63,69 @@ int main(int argc, char** argv) {
                 interval_len = (b - a)/N;
     unsigned j = 0, i;
     
-    // A time to take stones away...
-    for (i = 0, interval_start = a;
-         i < online_cpus_num;
-         ++i, interval_start += interval_len, j++) {
+    if (!use_hyper) {
+        for (i = 0, interval_start = a;
+             i < online_cpus_num;
+             ++i, interval_start += interval_len, j++) {
 
-        // running the calculation on every physical core, but
-        // some threads are "fake" and are not actually used so that
-        // all the cores are loaded and Intel Turbo Boost don't distort the results
-        
-        while(!is_cpu_online[j]) ++j; // find next online physical core
+            // running the calculation on every physical core, but
+            // some threads are "fake" and are not actually used so that
+            // all the cores are loaded and Intel Turbo Boost don't distort the results
+            
+            while(!is_cpu_online[j]) ++j; // find next online physical core
 
-        data[i] = (SimpsonData) {
-            interval_start,
-            cpu_sets[j]
-        };
+            data[i] = (SimpsonData) {
+                interval_start,
+                cpu_sets[j]
+            };
 
-        PRINT("Running thread on core %u", j);
+            PRINT("Running thread on core %u", j);
+        }
+
+        for (i = 0; i < online_cpus_num; i++)
+            if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+                ERROR("Thread creation failed");
+
+        long double S = 0, *r;
+        for (i = 0; i < online_cpus_num; ++i) {
+            if (pthread_join(threads[i], (void**) &r))
+                ERROR("Thread joining failed");
+            if (i < N)
+                S += *r;
+        }
+        printf("%.12Lf\n", S);
     }
+    else {
+        for (i = 0, interval_start = a;
+             i < online_virtual_cpus_num;
+             ++i, interval_start += interval_len, j++) {
 
-    for (i = 0; i < online_cpus_num; i++)
-        if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
-            ERROR("Thread creation failed");
+            // running the calculation on every physical core, but
+            // some threads are "fake" and are not actually used so that
+            // all the cores are loaded and Intel Turbo Boost don't distort the results
+            
 
-    // ...and a time to get stones together
-    long double S = 0, *r;
-    for (i = 0; i < online_cpus_num; ++i) {
-        if (pthread_join(threads[i], (void**) &r))
-            ERROR("Thread joining failed");
-        if (i < N)
-            S += *r;
+            data[i] = (SimpsonData) {
+                interval_start,
+                virtual_cpu_sets[i]
+            };
+
+            PRINT("Running thread on core %u", j);
+        }
+
+        for (i = 0; i < online_virtual_cpus_num; i++)
+            if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+                ERROR("Thread creation failed");
+
+        long double S = 0, *r;
+        for (i = 0; i < online_virtual_cpus_num; ++i) {
+            if (pthread_join(threads[i], (void**) &r))
+                ERROR("Thread joining failed");
+            if (i < N)
+                S += *r;
+        }
+        printf("%.12Lf\n", S);
     }
-    printf("%.12Lf\n", S);
-
     free(threads);
     free(data);
     return 0;
@@ -156,6 +189,9 @@ void cpu_process() {
         if (!is_virtual_cpu_online[i])
             continue;
 
+        CPU_SET(i, &virtual_cpu_sets[online_virtual_cpus_num]); 
+        online_virtual_cpus_num++;
+
         // read the corresponding physical core number
         sprintf(filename, "/sys/devices/system/cpu/cpu%d/topology/core_id", i);
         ERRTEST(fd = open(filename, O_RDONLY));
@@ -179,8 +215,12 @@ void cpu_process() {
         }
     }
 
-    if (online_cpus_num < N)
-        ERROR("The number of physical cores online is less than requested number of threads");
+    if (online_cpus_num < N) {
+        PRINT("The number of physical cores online is less"
+        " than requested number of threads, running with all available virtual cores");
+        use_hyper = true;
+    }
+
 }
 
 

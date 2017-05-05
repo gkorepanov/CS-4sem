@@ -18,14 +18,14 @@ $(TARGET): $(OBJS)
 
 clean:
 	-@rm $(OBJS) $(TARGET)
-	@find . -name "*.d"    | xargs rm
-	@find . -name "*.gcov" | xargs rm
-	@find . -name "*.gcno" | xargs rm
-	@find . -name "*.gcda" | xargs rm
+	-@find . -name "*.d"    | xargs rm -rf
+	-@find . -name "*.gcov" | xargs rm -rf
+	-@find . -name "*.gcno" | xargs rm -rf
+	-@find . -name "*.gcda" | xargs rm -rf
 
 run: $(TARGET) 
-	@find . -name "*.gcov" | xargs rm && \
-	find . -name "*.gcda" | xargs rm && \
+	-@find . -name "*.gcov" | xargs rm -rf
+	-@find . -name "*.gcda" | xargs rm -rf
 	$(TARGET)
 	gcov -a list.c
 

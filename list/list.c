@@ -244,7 +244,7 @@ ListIterator list_erase(List* self, ListIterator iter) {
     ListIterator next_iter = (ListIterator) {
         iter.prev,
         iter.next,
-        iter.next ? iter.next->next : NULL,
+        iter.next->next,
         iter.pos
     };
 

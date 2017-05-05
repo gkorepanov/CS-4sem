@@ -117,8 +117,10 @@ void cpu_process() {
     int fd;
     ERRTEST(fd = open("/sys/devices/system/cpu/online", O_RDONLY));
     char online_str[MAX_SYS_FILE_LENGTH];
-    ERRTEST(read(fd, online_str, MAX_SYS_FILE_LENGTH));
+    int bytes_read;
+    ERRTEST(bytes_read = read(fd, online_str, MAX_SYS_FILE_LENGTH-1));
     close(fd);
+    online_str[bytes_read] = '\0';
 
     unsigned left_bound, right_bound;
     char *saveptr1 = NULL,
@@ -147,7 +149,7 @@ void cpu_process() {
         CPU_ZERO(&cpu_sets[i]);
     
     char filename[256],
-         core_str[10];
+         core_str[11];
     int  core_id;
 
     for (unsigned i = 0; i < MAX_CPUS; i++) {
@@ -157,8 +159,10 @@ void cpu_process() {
         // read the corresponding physical core number
         sprintf(filename, "/sys/devices/system/cpu/cpu%d/topology/core_id", i);
         ERRTEST(fd = open(filename, O_RDONLY));
-        ERRTEST(read(fd, core_str, 10));
+        int bytes_read;
+        ERRTEST(bytes_read = read(fd, core_str, 10));
         close(fd);
+        core_str[bytes_read] = '\0';
 
         if (!sscanf(core_str, "%d", &core_id))
             ERROR("Failed to parse topology/core_id file");

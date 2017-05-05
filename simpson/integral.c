@@ -24,6 +24,7 @@
 typedef struct SimpsonData {
     long double a;                         // is used as thread rvalue
     cpu_set_t cpuset;
+    unsigned n;
 } SimpsonData;
 
 SimpsonData* data;
@@ -31,7 +32,7 @@ pthread_t* threads;
 long double a, b, h, h2;
 unsigned N, steps;
 
-bool use_hyper = false;
+int use_hyper = 0;
 
 unsigned is_virtual_cpu_online[MAX_CPUS],  // flags showing whether some virtual cpu is online or not
          is_cpu_online[MAX_CPUS],          // flags showing whether some physical core is online or not
@@ -76,7 +77,8 @@ int main(int argc, char** argv) {
 
             data[i] = (SimpsonData) {
                 interval_start,
-                cpu_sets[j]
+                cpu_sets[j],
+                i
             };
 
             PRINT("Running thread on core %u", j);
@@ -96,32 +98,32 @@ int main(int argc, char** argv) {
         printf("%.12Lf\n", S);
     }
     else {
-        for (i = 0, interval_start = a;
+        for (unsigned i = 0, interval_start = a;
              i < online_virtual_cpus_num;
-             ++i, interval_start += interval_len, j++) {
+             ++i, interval_start += interval_len) {
 
             // running the calculation on every physical core, but
             // some threads are "fake" and are not actually used so that
             // all the cores are loaded and Intel Turbo Boost don't distort the results
-            
 
             data[i] = (SimpsonData) {
                 interval_start,
-                virtual_cpu_sets[i]
+                virtual_cpu_sets[i],
+                i
             };
 
-            PRINT("Running thread on core %u", j);
+            PRINT("Running thread on virtual core %u", i);
         }
 
-        for (i = 0; i < online_virtual_cpus_num; i++)
+        PRINT("online_virtual_cpus_num %u", online_virtual_cpus_num);
+        for (unsigned i = 0; i < online_virtual_cpus_num; i++)
             if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
                 ERROR("Thread creation failed");
 
         long double S = 0, *r;
-        for (i = 0; i < online_virtual_cpus_num; ++i) {
+        for (unsigned i = 0; i < online_virtual_cpus_num; ++i) {
             if (pthread_join(threads[i], (void**) &r))
                 ERROR("Thread joining failed");
-            if (i < N)
                 S += *r;
         }
         printf("%.12Lf\n", S);
@@ -178,8 +180,10 @@ void cpu_process() {
 
 
     memset(&is_cpu_online, 0, sizeof(is_cpu_online));
-    for (unsigned i = 0; i < MAX_CPUS; i++)
+    for (unsigned i = 0; i < MAX_CPUS; i++) {
         CPU_ZERO(&cpu_sets[i]);
+        CPU_ZERO(&virtual_cpu_sets[i]);
+    }
     
     char filename[256],
          core_str[11];
@@ -189,7 +193,8 @@ void cpu_process() {
         if (!is_virtual_cpu_online[i])
             continue;
 
-        CPU_SET(i, &virtual_cpu_sets[online_virtual_cpus_num]); 
+        CPU_SET(i, &virtual_cpu_sets[online_virtual_cpus_num]);
+        PRINT("%u virtual core is online", online_virtual_cpus_num);
         online_virtual_cpus_num++;
 
         // read the corresponding physical core number
@@ -211,14 +216,17 @@ void cpu_process() {
 
             // bind virtual cpu to physical one
             CPU_SET(i, &cpu_sets[core_id]);
-            PRINT("Binding %d virtual cpu to %d physical core", i, core_id);
         }
+
+        PRINT("%d virtual cpu is on %d physical core\n", i, core_id);
+
     }
 
     if (online_cpus_num < N) {
         PRINT("The number of physical cores online is less"
         " than requested number of threads, running with all available virtual cores");
-        use_hyper = true;
+        PRINT("Virtual cores available: %u\n", online_virtual_cpus_num);
+        use_hyper = 1;
     }
 
 }
@@ -228,7 +236,9 @@ void* simpson(void* args) {
     cpu_set_t cpuset = ((SimpsonData*)args)->cpuset;
     pthread_t current_thread = pthread_self();
        if (pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset))
-        ERROR("Sticking thread to specific core failed");
+        PRINT("Sticking thread %u to specific core failed, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+
+    PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
 
     long double lh = h,
                 lh2 = h2,

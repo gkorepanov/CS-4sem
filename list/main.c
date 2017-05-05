@@ -76,7 +76,42 @@ typedef struct {
     cur_iter = (ListIterator){NULL, NULL, NULL, 1};                           \
     assert(list_iterator_nil(list_iterator_next(&cur_iter)));                 \
     cur_iter = (ListIterator){NULL, NULL, NULL, 1};                           \
-    assert(list_iterator_nil(list_iterator_prev(&cur_iter)));
+    assert(list_iterator_nil(list_iterator_prev(&cur_iter)));                 \
+    assert(!list_push_front(list, NULL));                                     \
+    assert(!list_push_back(list, NULL));                                      \
+    cur_iter = ListIteratorNil;                                               \
+    assert(list_iterator_nil(list_insert(list, cur_iter, NULL)));             \
+    assert(list_iterator_nil(list_insert(list, cur_iter, &arr[0].node)));     \
+    assert(list_iterator_nil(list_erase(list, cur_iter)));                    \
+    assert(!list_size(NULL));
+
+#define test_insert_erase()                                                   \
+    arr[3].val = 33; arr[4].val = 41; arr[5].val = 29;                        \
+    test_push(front);                                                         \
+    assert(!list_iterator_cmp(                                                \
+        list_insert(list, list_begin(list), &arr[3].node),                    \
+        list_begin(list)));                                                   \
+    test_list(4);                                                             \
+    assert(!list_iterator_cmp(                                                \
+        list_end(list), list_insert(list, list_end(list), &arr[4].node)));    \
+    test_list(5);                                                             \
+    cur_iter = list_iterator_advance(list_begin(list), 2);                    \
+    assert(!list_iterator_cmp(list_insert(list, cur_iter, &arr[5].node),      \
+                              list_iterator_advance(list_begin(list), 2)));   \
+    test_list(6);                                                             \
+    cur_iter = list_iterator_advance(list_end(list), -1);                     \
+    assert(!list_iterator_cmp(list_erase(list, cur_iter),                     \
+                              list_end(list)));                               \
+    test_list(5);                                                             \
+    assert(!list_iterator_cmp(list_erase(list, list_begin(list)),             \
+                              list_begin(list)));                             \
+    test_list(4);                                                             \
+    cur_iter = list_iterator_advance(list_begin(list), 2);                    \
+    assert(!list_iterator_cmp(list_erase(list, cur_iter),                     \
+                              list_iterator_advance(list_begin(list), 2)));   \
+    test_list(3);                                                             \
+    test_pop(back);
+
 
 int main() {
     List* list = calloc(1, sizeof(list));
@@ -97,6 +132,8 @@ int main() {
     test_pop(back);
 
     test_nils();
+
+    test_insert_erase();
 
     free(list);
     return 0;

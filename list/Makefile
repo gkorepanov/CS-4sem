@@ -23,7 +23,9 @@ clean:
 	@find . -name "*.gcno" | xargs rm
 	@find . -name "*.gcda" | xargs rm
 
-run:
+run: $(TARGET) 
+	@find . -name "*.gcov" | xargs rm && \
+	find . -name "*.gcda" | xargs rm && \
 	$(TARGET)
 	gcov -a list.c
 

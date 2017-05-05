@@ -15,18 +15,23 @@
 
 #define LIST_OK  0xE2E4 // for chess fans
 
+#define __list_entry(ptr, type, member) \
+    ((type *)((char *)(ptr) - offsetof(type, member)))
+
+#define list_entry(iter, type, member) \
+    __list_entry(iter.node, type, member)
 
 /*****************************************************************************
  *                               MAIN STRUCTURES                             *
  *****************************************************************************/
 
 typedef struct ListNode {
-	struct ListNode *prev, *next;
+    struct ListNode *prev, *next;
 } ListNode;
 
 typedef struct {
-	ListNode *front, *back;
-	size_t size;
+    ListNode *front, *back;
+    size_t size;
 } List;
 
 List list_create();
@@ -37,10 +42,10 @@ List list_create();
  *****************************************************************************/
 
 typedef struct ListIterator {
-	ListNode* prev;
-	ListNode* node;
-	ListNode* next;
-	size_t pos;
+    ListNode* prev;
+    ListNode* node;
+    ListNode* next;
+    size_t pos;
 } ListIterator;
 
 const ListIterator ListIteratorNil;
@@ -58,18 +63,17 @@ ListIterator list_begin (List* self);
 ListIterator list_end   (List* self);
 
 /* compare iterators
- * > 0 : iter1 < iter2	forward
+ * > 0 : iter1 < iter2    forward
  * = 0 : iter1 = iter2
- * < 0 : iter1 > iter2	backward
+ * < 0 : iter1 > iter2    backward
  */
 int   list_iterator_cmp (ListIterator iter1, ListIterator iter2);
-void* list_entry        (ListIterator iter);
 void  list_for_each     (ListIterator iter1, ListIterator iter2,
                          void (*func)(void*));
 
 
 /*****************************************************************************
- *                            	     METHODS                                 *
+ *                                     METHODS                                 *
  *****************************************************************************/
 
 // append the given node to the list

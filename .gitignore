@@ -58,3 +58,11 @@
 ehthumbs.db
 Thumbs.db
 *.swp
+
+# gcov #
+########
+*.gcov
+*.gcno
+*.gcda
+*.gcno
+

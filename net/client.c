@@ -9,7 +9,6 @@
 #include <netdb.h>
 #include "net.h"
 #define MSGPID
-#define DEBUG
 #include "../tools/alerts.h"
 
 struct sockaddr_in baddr; // Broadcast address
@@ -32,12 +31,12 @@ void recv_broadcast() {
     buffer[recv_bytes] = '\0';
     PRINT("Received %d bytes: %s", recv_bytes, buffer);
 
-    shutdown(bsock, 2);
+    shutdown(bsock, SHUT_RDWR);
     close(bsock);
 }
 
 
-int main(int argc, char** argv)
+int main()
 {
     recv_broadcast();
 
@@ -54,8 +53,8 @@ int main(int argc, char** argv)
     int ld1 = 1;
     ERRTEST(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(connect(sock, (struct sockaddr*)&addr, addr_len));
-
-    sleep(3);
+    getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
+    PRINT("Connected [:%d]", ntohs(baddr.sin_port));
 
     shutdown(sock, SHUT_RDWR);
     close(sock);

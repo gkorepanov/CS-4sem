@@ -11,7 +11,6 @@
 #include <netdb.h>
 #include "net.h"
 #define MSGPID
-#define DEBUG
 #include "../tools/alerts.h"
 
 int bsock; // Socket for broadcasting
@@ -27,7 +26,7 @@ void* broadcast(void* args) {
     memset(&addr, 0, addr_len);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(0);
-    addr.sin_family = PF_INET;
+    addr.sin_family = AF_INET;
 
     ERRTEST(bind(bsock, (struct sockaddr*)&addr, addr_len));
     int ld1 = 1;
@@ -41,6 +40,8 @@ void* broadcast(void* args) {
         PRINT("Sent %d bytes", sent_bytes);
         sleep(1);
     }
+
+    args = NULL;
 }
 
 
@@ -56,9 +57,9 @@ int main(int argc, char** argv)
 
     ERRTEST(master = socket(PF_INET, SOCK_STREAM, 0));
     memset(&addr, 0, addr_len);
-    addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(TCP_PORT);
+    addr.sin_family = AF_INET;
 
     ERRTEST(bind(master, (struct sockaddr*)&addr, addr_len));
     ERRTEST(listen(master, clients_max));
@@ -92,15 +93,14 @@ int main(int argc, char** argv)
             PRINT("Event @%d", master);
             int new;
             ERRTEST(new = accept(master, (struct sockaddr*)&addr, &addr_len));
-            for (int i = 0; i < clients_max; ++i) {
-                PRINT("New connection (%d) [%s:%d]",
+            PRINT("New connection (%d) [%s:%d]",
                     clients_count, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-                clients_count += 1;
+            for (int i = 0; i < clients_max; ++i)
                 if (!clients[i]) {
                     clients[i] = new;
                     break;
                 }
-            }
+            clients_count += 1;
         }
 
         for (int i = 0; i < clients_max; ++i)

@@ -30,7 +30,7 @@ char __ALERTS_BUFFER1[BUFSIZ],
   {\
     sprintf(__ALERTS_BUFFER1, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
     sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
-    fprintf(stderr, "%s%s\n- %s", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
+    fprintf(stderr, "%s%s\n- %s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
     exit   (EXIT_FAILURE);\
   }
 
@@ -58,7 +58,7 @@ char __ALERTS_BUFFER1[BUFSIZ],
   {\
     sprintf(__ALERTS_BUFFER1, ERR UL "@%d" UN_UL "  ", __LINE__);\
     sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
-    fprintf(stderr, "%s%s\n- %s", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
+    fprintf(stderr, "%s%s\n- %s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
     exit   (EXIT_FAILURE);\
   }
 

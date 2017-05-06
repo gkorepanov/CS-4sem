@@ -23,9 +23,7 @@ void* broadcast(void* args) {
     int sent_bytes, buffer_len;
     socklen_t addr_len = sizeof(struct sockaddr_in);
     
-    if (!(bsock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)))
-        ERROR("Failed to create a socket");
-
+    ERRTEST(bsock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP));
     memset(&addr, 0, addr_len);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
     addr.sin_port = htons(0);
@@ -53,15 +51,14 @@ int main(int argc, char** argv)
         ERROR("Usage: %s [CLIENTS]", argv[0]);
 
     int master, *clients = calloc(clients_max, sizeof(int));
-    if (!(master = socket(PF_INET, SOCK_STREAM, 0)))
-        ERROR("Failed to create a socket");
-
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(struct sockaddr_in);
+
+    ERRTEST(master = socket(PF_INET, SOCK_STREAM, 0));
     memset(&addr, 0, addr_len);
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = TCP_PORT;
+    addr.sin_port = htons(TCP_PORT);
 
     ERRTEST(bind(master, (struct sockaddr*)&addr, addr_len));
     ERRTEST(listen(master, clients_max));
@@ -75,6 +72,7 @@ int main(int argc, char** argv)
     int clients_count = 0, maxsd, recv_bytes;
     char buffer[BUFSIZ];
 
+    PRINT("Waiting for clients...");
     while (clients_count < clients_max) {
         FD_ZERO(&fds);
         FD_SET(master, &fds);
@@ -91,32 +89,41 @@ int main(int argc, char** argv)
             ERROR("Select failed");
 
         if (FD_ISSET(master, &fds)) {
+            PRINT("Event @%d", master);
             int new;
             ERRTEST(new = accept(master, (struct sockaddr*)&addr, &addr_len));
             for (int i = 0; i < clients_max; ++i) {
-                if (!clients[i])
-                    clients[i] = new;
                 PRINT("New connection (%d) [%s:%d]",
                     clients_count, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+                clients_count += 1;
+                if (!clients[i]) {
+                    clients[i] = new;
+                    break;
+                }
             }
         }
 
         for (int i = 0; i < clients_max; ++i)
             if (FD_ISSET(clients[i], &fds)) {
+                PRINT("Event @%d", clients[i]);
                 ERRTEST(recv_bytes = read(clients[i], buffer, BUFSIZ));
                 if (!recv_bytes) {
                     // Connection closed
                     close(clients[i]);
                     clients[i] = 0;
                     PRINT("Connection (%d) closed", i);
+                    clients_count -= 1;
                 }
             }
     }
 
+    shutdown(bsock, SHUT_RDWR);
+    close(master);
+
     // Finish the broadcast
     pthread_cancel(bthread);
     pthread_join(bthread, NULL);
-    shutdown(bsock, 2);
+    shutdown(bsock, SHUT_RDWR);
     close(bsock);
 
     return 0;

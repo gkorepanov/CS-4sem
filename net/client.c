@@ -12,6 +12,7 @@
 #include "../tools/alerts.h"
 
 struct sockaddr_in baddr; // Broadcast address
+struct net_msg msg;
 
 void recv_broadcast() {
     int bsock, recv_bytes;
@@ -26,10 +27,12 @@ void recv_broadcast() {
     ERRTEST(setsockopt(bsock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(bind(bsock, (struct sockaddr*)&baddr, baddr_len));
 
-    char buffer[BUFSIZ];
-    ERRTEST(recv_bytes = recvfrom(bsock, buffer, BUFSIZ-1, 0, (struct sockaddr *)&baddr, &baddr_len));
-    buffer[recv_bytes] = '\0';
-    PRINT("Received %d bytes: %s", recv_bytes, buffer);
+    ERRTEST(recv_bytes = recvfrom(bsock, &msg, sizeof(struct net_msg),
+        0, (struct sockaddr *)&baddr, &baddr_len));
+    if (recv_bytes != sizeof(struct net_msg))
+        ERROR("Net message receiving failed");
+    PRINT("Received %d bytes; server port %d", recv_bytes, msg.tcp_port);
+    baddr.sin_port = msg.tcp_port;
 
     shutdown(bsock, SHUT_RDWR);
     close(bsock);
@@ -47,14 +50,24 @@ int main()
     ERRTEST(sock = socket(PF_INET, SOCK_STREAM, 0));
     memset(&addr, 0, addr_len);
     addr.sin_addr.s_addr = baddr.sin_addr.s_addr;
-    addr.sin_port = htons(TCP_PORT);
+    addr.sin_port = baddr.sin_port;
     addr.sin_family = AF_INET;
 
     int ld1 = 1;
     ERRTEST(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(connect(sock, (struct sockaddr*)&addr, addr_len));
     getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
-    PRINT("Connected [:%d]", ntohs(baddr.sin_port));
+    PRINT("Connected (port %d)", ntohs(baddr.sin_port));
+
+    msg.cores = 1;
+    int wrote_bytes;
+    ERRTEST(wrote_bytes = write(sock, &msg, sizeof(struct net_msg)));
+    if (wrote_bytes != sizeof(struct net_msg))
+        ERROR("Net message sending failed")
+    else
+        PRINT("Sent number of cores");
+
+    while(1);
 
     shutdown(sock, SHUT_RDWR);
     close(sock);

@@ -13,13 +13,13 @@
 #define MSGPID
 #include "../tools/alerts.h"
 
-int bsock; // Socket for broadcasting
+int bsock;   // Socket for broadcasting
+int *cores;  // Clients' numbers of cores
 
 void* broadcast(void* args) {
-    char buffer[BUFSIZ] = "Hello, broad world!";
     struct sockaddr_in addr;
 
-    int sent_bytes, buffer_len;
+    int sent_bytes;
     socklen_t addr_len = sizeof(struct sockaddr_in);
     
     ERRTEST(bsock = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP));
@@ -34,9 +34,11 @@ void* broadcast(void* args) {
     addr.sin_addr.s_addr = htonl(-1);
     addr.sin_port = htons(BROADCAST_PORT);
 
-    buffer_len = strlen(buffer);
     while (1) {
-        ERRTEST(sent_bytes = sendto(bsock, buffer, buffer_len, 0, (struct sockaddr*)&addr, addr_len));
+        ERRTEST(sent_bytes = sendto(bsock, args, sizeof(struct net_msg),
+            0, (struct sockaddr*)&addr, addr_len));
+        if (sent_bytes != sizeof(struct net_msg))
+            ERROR("Net message sending failed")
         PRINT("Sent %d bytes", sent_bytes);
         sleep(1);
     }
@@ -51,30 +53,39 @@ int main(int argc, char** argv)
     if (argc < 2 || !sscanf(argv[1], "%d", &clients_max))
         ERROR("Usage: %s [CLIENTS]", argv[0]);
 
-    int master, *clients = calloc(clients_max, sizeof(int));
+    int master, *clients, *cores;
+    if (!(clients = calloc(clients_max, sizeof(int))) ||
+        !(cores   = calloc(clients_max, sizeof(int))))
+        ERROR("Memory allocation failed");
+
     struct sockaddr_in addr;
     socklen_t addr_len = sizeof(struct sockaddr_in);
 
     ERRTEST(master = socket(PF_INET, SOCK_STREAM, 0));
     memset(&addr, 0, addr_len);
     addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(TCP_PORT);
+    addr.sin_port = htons(0);
     addr.sin_family = AF_INET;
 
     ERRTEST(bind(master, (struct sockaddr*)&addr, addr_len));
     ERRTEST(listen(master, clients_max));
+    ERRTEST(getsockname(master, (struct sockaddr*)&addr, &addr_len));
+
+    struct net_msg broadcast_msg;
+    memset(&broadcast_msg, 0, sizeof(struct net_msg));
+    broadcast_msg.tcp_port = addr.sin_port;
 
     // Start the broadcast
     pthread_t bthread;
-    if (pthread_create(&bthread, NULL, &broadcast, NULL))
+    if (pthread_create(&bthread, NULL, &broadcast, &broadcast_msg))
         ERROR("Failed to create the broadcasting thread");
 
     fd_set fds;
-    int clients_count = 0, maxsd, recv_bytes;
-    char buffer[BUFSIZ];
+    int clients_count = 0, cores_info = 0, maxsd, recv_bytes;
+    struct net_msg recv_msg;
 
-    PRINT("Waiting for clients...");
-    while (clients_count < clients_max) {
+    PRINT("Waiting for clients (port %d)", broadcast_msg.tcp_port);
+    while (cores_info < clients_max) {
         FD_ZERO(&fds);
         FD_SET(master, &fds);
         maxsd = master;
@@ -86,8 +97,14 @@ int main(int argc, char** argv)
             }
         }
 
+        if (clients_count == clients_max) {
+            FD_CLR(master, &fds);
+            shutdown(master, SHUT_RDWR);
+            close(master);
+        }
+
         if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR))
-            ERROR("Select failed");
+            ERRORV("Select failed");
 
         if (FD_ISSET(master, &fds)) {
             PRINT("Event @%d", master);
@@ -106,19 +123,27 @@ int main(int argc, char** argv)
         for (int i = 0; i < clients_max; ++i)
             if (FD_ISSET(clients[i], &fds)) {
                 PRINT("Event @%d", clients[i]);
-                ERRTEST(recv_bytes = read(clients[i], buffer, BUFSIZ));
+                ERRTEST(recv_bytes = read(clients[i], &recv_msg, sizeof(struct net_msg)));
                 if (!recv_bytes) {
                     // Connection closed
                     close(clients[i]);
                     clients[i] = 0;
+                    cores[i] = 0;
                     PRINT("Connection (%d) closed", i);
                     clients_count -= 1;
+                    cores_info -= 1;
+                }
+                else if (recv_bytes != sizeof(struct net_msg))
+                    ERROR("Net message receiving failed")
+                else {
+                    cores[i] = recv_msg.cores;
+                    cores_info += 1;
+                    PRINT("Client %d has %d core(s)", i, cores[i]);
                 }
             }
     }
 
-    shutdown(bsock, SHUT_RDWR);
-    close(master);
+    PRINT("Ready to calculate");
 
     // Finish the broadcast
     pthread_cancel(bthread);
@@ -126,5 +151,7 @@ int main(int argc, char** argv)
     shutdown(bsock, SHUT_RDWR);
     close(bsock);
 
+    free(clients);
+    free(cores);
     return 0;
 }

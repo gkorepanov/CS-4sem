@@ -14,31 +14,32 @@
 #define SPACE              "      "
 #define LINEUP             "\033[A"
 
+char __ALERTS_BUFFER1[BUFSIZ],
+     __ALERTS_BUFFER2[BUFSIZ];
+
 #ifdef  MSGPID
   #define ERROR(...)\
   {\
-    fprintf(stderr, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
-    fprintf(stderr, __VA_ARGS__);\
-    putc   ('\n', stderr);\
+    sprintf(__ALERTS_BUFFER1, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
+    sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+    fprintf(stderr, "%s%s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
     exit   (EXIT_FAILURE);\
   }
 
   #define ERRORV(...)\
   {\
-      fprintf(stderr, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
-      fprintf(stderr, __VA_ARGS__);\
-      putc   ('\n', stderr);\
-      fprintf(stderr, "\nERRNO: %s\n", strerror(errno));\
-      putc   ('\n', stderr);\
-      exit   (EXIT_FAILURE);\
+    sprintf(__ALERTS_BUFFER1, YELLOW "PID %d:  " ERR UL "@%d" UN_UL "  ", getpid(), __LINE__);\
+    sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+    fprintf(stderr, "%s%s\n- %s", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
+    exit   (EXIT_FAILURE);\
   }
 
   #ifdef DEBUG
     #define PRINT(...)\
     {\
-      fprintf(stdout, YELLOW "PID %d:  " NORM, getpid());\
-      fprintf(stdout, __VA_ARGS__);\
-      putc   ('\n', stderr);\
+      sprintf(__ALERTS_BUFFER1, YELLOW "PID %d:  " NORM, getpid());\
+      sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+      fprintf(stderr, "%s%s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
     }
   #else  // DEBUG
     #define PRINT(...)
@@ -47,28 +48,26 @@
 #else  // MSGPID
   #define ERROR(...)\
   {\
-    fprintf(stderr, ERR UL "@%d" UN_UL "  ", __LINE__);\
-    fprintf(stderr, __VA_ARGS__);\
-    putc   ('\n', stderr);\
+    sprintf(__ALERTS_BUFFER1, ERR UL "@%d" UN_UL "  ", __LINE__);\
+    sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+    fprintf(stderr, "%s%s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
     exit   (EXIT_FAILURE);\
   }
 
   #define ERRORV(...)\
   {\
-    fprintf(stderr, ERR UL "@%d" UN_UL "  ", __LINE__);\
-    fprintf(stderr, __VA_ARGS__);\
-    putc   ('\n', stderr);\
-    fprintf(stderr, "\nERRNO: %s\n", strerror(errno));\
-    putc   ('\n', stderr);\
+    sprintf(__ALERTS_BUFFER1, ERR UL "@%d" UN_UL "  ", __LINE__);\
+    sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+    fprintf(stderr, "%s%s\n- %s", __ALERTS_BUFFER1, __ALERTS_BUFFER2, strerror(errno));\
     exit   (EXIT_FAILURE);\
   }
 
   #ifdef DEBUG
     #define PRINT(...)\
     {\
-      fprintf(stdout, LBLUE);\
-      fprintf(stdout, __VA_ARGS__);\
-      fprintf(stdout, NORM "\n");\
+      sprintf(__ALERTS_BUFFER1, LBLUE);\
+      sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
+      fprintf(stderr, "%s%s" NORM "\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
     }
   #else  // DEBUG
     #define PRINT(...)

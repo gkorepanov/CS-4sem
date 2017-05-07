@@ -40,6 +40,8 @@ int main()
                 interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
 
     PRINT("Calculation started");
+    PRINT("Int [%.6Lf:%.6Lf] (%u steps)",
+        msg.interval_start, msg.interval_end, msg.steps);
 
     for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
         data[i] = interval_start;
@@ -107,7 +109,7 @@ void wait_for_job() {
     getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
     PRINT("Connected (port %d)", ntohs(baddr.sin_port));
 
-    msg.cores = 1;
+    msg.cores = sysconf(_SC_NPROCESSORS_ONLN);
     ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")
@@ -131,9 +133,9 @@ void* simpson(void* args) {
                 func_a = FUNC(a),
                 func_c,
                 sum = 0;
-    unsigned steps = msg.steps;
+    unsigned steps = msg.steps/msg.cores;
 
-    PRINT("Int [%.6Lf:%.6Lf] (%u steps)", a, a + h*steps, steps);
+    PRINT("Thread int [%.6Lf:%.6Lf] (%u steps)", a, a + h*steps, steps);
     for (unsigned i = 0; i < steps; ++i) {
         func_c = FUNC(c);
         sum += func_a + 4 * FUNC(b) + func_c;

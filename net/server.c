@@ -148,6 +148,8 @@ void wait_for_clients() {
     struct net_msg recv_msg;
 
     PRINT("Waiting for clients (port %d)", broadcast_msg.tcp_port);
+    cores_total = 0;
+
     while (cores_info < clients_max) {
         FD_ZERO(&fds);
         FD_SET(master, &fds);

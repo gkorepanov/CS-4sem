@@ -1,7 +1,7 @@
 .PHONY: clean run
 
 TARGET = ./server ./client
-FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g
+FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -O3
 DEPS = $(OBJS:.o=.d)
 
 
@@ -21,6 +21,7 @@ client: client.o
 
 clean:
 	-@rm $(OBJS) $(TARGET)
+	-@find . -name "*.o" | xargs rm -rf
 	-@find . -name "*.d" | xargs rm -rf
 
 run: $(TARGET) 

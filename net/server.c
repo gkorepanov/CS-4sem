@@ -10,22 +10,22 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "./net.h"
-#define MSGPID
 #include "../tools/alerts.h"
 
 int bsock, clients_max, master, *client, *cores, bytes, cores_total;
 struct sockaddr_in addr;
 socklen_t addr_len = sizeof(struct sockaddr_in);
 struct net_msg broadcast_msg;
+long double a, b;
 
+void arg_process(int argc, char** argv);
 void* broadcast(void* args);
 void wait_for_clients();
 
 
 int main(int argc, char** argv)
 {
-    if (argc < 2 || !sscanf(argv[1], "%d", &clients_max))
-        ERROR("Usage: %s [CLIENTS]", argv[0]);
+    arg_process(argc, argv);
 
     if (!(client = calloc(clients_max, sizeof(int))) ||
         !(cores  = calloc(clients_max, sizeof(int))))
@@ -60,7 +60,6 @@ int main(int argc, char** argv)
 
     // Jobs distribution
     struct net_msg request;
-    long double a = 0, b = 3;
     long double h = (b - a)/SPLIT;
     unsigned cores_count = 0;
     for (int i = 0; i < clients_max; ++i) {
@@ -68,8 +67,8 @@ int main(int argc, char** argv)
             0,
             cores[i],
             SPLIT/cores_total*cores[i],
-            (b - a)/cores_total*cores_count,
-            (b - a)/cores_total*(cores_count + cores[i]),
+            a + (b - a)/cores_total*cores_count,
+            a + (b - a)/cores_total*(cores_count + cores[i]),
             h
         };
         ERRTEST(bytes = write(client[i], &request, sizeof(struct net_msg)));
@@ -97,6 +96,18 @@ int main(int argc, char** argv)
     free(client);
     free(cores);
     return 0;
+}
+
+
+void arg_process(int argc, char** argv) {
+    if (argc != 4)
+        ERROR("Usage: %s [lower bound] [upper bound] [NUMBER OF CLIENTS]",
+            argv[0]);
+
+    if (!sscanf(argv[1], "%Lf", &a) || !sscanf(argv[2], "%Lf", &b))
+        ERROR("Invalid argument (type <long double>)");
+    if (!sscanf(argv[3], "%u", &clients_max))
+        ERROR("Invalid argument (type <unsigned>)");
 }
 
 

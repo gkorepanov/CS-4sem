@@ -65,7 +65,7 @@ char __ALERTS_BUFFER1[BUFSIZ],
   #ifdef DEBUG
     #define PRINT(...)\
     {\
-      sprintf(__ALERTS_BUFFER1, LBLUE);\
+      sprintf(__ALERTS_BUFFER1, LGRAY);\
       sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
       fprintf(stderr, "%s%s" NORM "\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
     }

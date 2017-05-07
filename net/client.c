@@ -9,7 +9,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include "./net.h"
-#define MSGPID
 #include "../tools/alerts.h"
 
 struct sockaddr_in baddr;
@@ -40,7 +39,7 @@ int main()
     long double interval_start = msg.interval_start,
                 interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
 
-    PRINT("Calculation start");
+    PRINT("Calculation started");
 
     for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
         data[i] = interval_start;
@@ -64,6 +63,8 @@ int main()
     PRINT("Done.")
     shutdown(sock, SHUT_RDWR);
     close(sock);
+    free(threads);
+    free(data);
     exit(EXIT_SUCCESS);
 }
 
@@ -132,6 +133,7 @@ void* simpson(void* args) {
                 sum = 0;
     unsigned steps = msg.steps;
 
+    PRINT("Int [%.6Lf:%.6Lf] (%u steps)", a, a + h*steps, steps);
     for (unsigned i = 0; i < steps; ++i) {
         func_c = FUNC(c);
         sum += func_a + 4 * FUNC(b) + func_c;

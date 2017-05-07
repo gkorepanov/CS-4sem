@@ -25,6 +25,3 @@ clean:
 
 run: $(TARGET) 
 	echo NIY
-
-debug: FLAGS += -DDEBUG
-debug: $(TARGET)

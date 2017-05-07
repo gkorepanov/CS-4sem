@@ -9,7 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "net.h"
+#include "./net.h"
 #define MSGPID
 #include "../tools/alerts.h"
 
@@ -53,9 +53,9 @@ int main(int argc, char** argv)
     if (argc < 2 || !sscanf(argv[1], "%d", &clients_max))
         ERROR("Usage: %s [CLIENTS]", argv[0]);
 
-    int master, *clients, *cores;
-    if (!(clients = calloc(clients_max, sizeof(int))) ||
-        !(cores   = calloc(clients_max, sizeof(int))))
+    int master, *client, *cores;
+    if (!(client = calloc(clients_max, sizeof(int))) ||
+        !(cores  = calloc(clients_max, sizeof(int))))
         ERROR("Memory allocation failed");
 
     struct sockaddr_in addr;
@@ -90,10 +90,10 @@ int main(int argc, char** argv)
         FD_SET(master, &fds);
         maxsd = master;
         for (int i = 0; i < clients_max; ++i) {
-            if (clients[i]) {
-                FD_SET(clients[i], &fds);
-                if (clients[i] > maxsd)
-                    maxsd = clients[i];
+            if (client[i]) {
+                FD_SET(client[i], &fds);
+                if (client[i] > maxsd)
+                    maxsd = client[i];
             }
         }
 
@@ -113,25 +113,26 @@ int main(int argc, char** argv)
             PRINT("New connection (%d) [%s:%d]",
                     clients_count, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
             for (int i = 0; i < clients_max; ++i)
-                if (!clients[i]) {
-                    clients[i] = new;
+                if (!client[i]) {
+                    client[i] = new;
                     break;
                 }
             clients_count += 1;
         }
 
         for (int i = 0; i < clients_max; ++i)
-            if (FD_ISSET(clients[i], &fds)) {
-                PRINT("Event @%d", clients[i]);
-                ERRTEST(recv_bytes = read(clients[i], &recv_msg, sizeof(struct net_msg)));
+            if (FD_ISSET(client[i], &fds)) {
+                PRINT("Event @%d", client[i]);
+                ERRTEST(recv_bytes = read(client[i], &recv_msg, sizeof(struct net_msg)));
                 if (!recv_bytes) {
                     // Connection closed
-                    close(clients[i]);
-                    clients[i] = 0;
-                    cores[i] = 0;
-                    PRINT("Connection (%d) closed", i);
-                    clients_count -= 1;
-                    cores_info -= 1;
+                    shutdown(master, SHUT_RDWR);
+                    close(master);
+                    for (int j = 0; j < clients_max; ++j) {
+                        shutdown(client[i], SHUT_RDWR);
+                        close(client[i]);
+                    }
+                    ERROR("Connection closed");
                 }
                 else if (recv_bytes != sizeof(struct net_msg))
                     ERROR("Net message receiving failed")
@@ -143,7 +144,7 @@ int main(int argc, char** argv)
             }
     }
 
-    PRINT("Ready to calculate");
+    PRINT("Ready for calculation");
 
     // Finish the broadcast
     pthread_cancel(bthread);
@@ -151,7 +152,22 @@ int main(int argc, char** argv)
     shutdown(bsock, SHUT_RDWR);
     close(bsock);
 
-    free(clients);
+    int wrote_bytes;
+    for (int i = 0; i < clients_max; ++i) {
+        struct net_msg request = (struct net_msg) {
+            0,
+            cores[i],
+            1,
+            0,
+            3,
+            3
+        };
+        ERRTEST(wrote_bytes = write(client[i], &request, sizeof(struct net_msg)));
+        if (wrote_bytes != sizeof(struct net_msg))
+            ERROR("Net message sending failed");
+    }
+
+    free(client);
     free(cores);
     return 0;
 }

@@ -2,17 +2,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <pthread.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include "net.h"
+#include "./net.h"
 #define MSGPID
 #include "../tools/alerts.h"
 
-struct sockaddr_in baddr; // Broadcast address
+struct sockaddr_in baddr;
 struct net_msg msg;
+long double h, h2, S;
 
 void recv_broadcast() {
     int bsock, recv_bytes;
@@ -36,6 +38,35 @@ void recv_broadcast() {
 
     shutdown(bsock, SHUT_RDWR);
     close(bsock);
+}
+
+
+long double* data;
+pthread_t* threads;
+
+void* simpson(void* args) {
+    long double lh = h,
+                lh2 = h2,
+                a = *(long double*)args,
+                b = a + lh2,
+                c = a + lh,
+                func_a = FUNC(a),
+                func_c,
+                sum = 0;
+    unsigned steps = msg.steps;
+
+    for (unsigned i = 0; i < steps; ++i) {
+        func_c = FUNC(c);
+        sum += func_a + 4 * FUNC(b) + func_c;
+        func_a = func_c;
+        a = c;
+        b += lh;
+        c += lh;
+    }
+
+    *(long double*)args = sum * h/6;
+    PRINT("%Lf", *(long double*)args);
+    pthread_exit(args);
 }
 
 
@@ -65,9 +96,41 @@ int main()
     if (wrote_bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")
     else
-        PRINT("Sent number of cores");
+        PRINT("Ready for calculation");
 
-    while(1);
+    int bytes;
+    ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
+    if (!bytes)
+        ERROR("Connection closed")
+    else if (bytes != sizeof(struct net_msg))
+        ERROR("Net message receiving failed");
+
+    if (!(threads = malloc(msg.cores * sizeof(pthread_t))) ||
+        !(data = malloc(msg.cores * sizeof(long double))))
+        ERROR("Memory allocation failed");
+
+    h = msg.h;
+    h2 = h/2;
+    long double interval_start,
+                interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
+    unsigned i;
+
+    for (i = 0, interval_start = msg.interval_start;
+         i < msg.cores;
+         ++i, interval_start += interval_len) {
+        data[i] = interval_start;
+        if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+            ERROR("Thread creation failed");
+    }
+
+    long double S = 0, *r;
+    for (i = 0; i < msg.cores; ++i) {
+        if (pthread_join(threads[i], (void**) &r))
+            ERROR("Thread joining failed");
+        S += *r;
+    }
+
+    PRINT("Result = %.12Lf\n", S);
 
     shutdown(sock, SHUT_RDWR);
     close(sock);

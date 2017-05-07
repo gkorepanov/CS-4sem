@@ -13,7 +13,7 @@
 #define MSGPID
 #include "../tools/alerts.h"
 
-int bsock, clients_max, master, *client, *cores, bytes;
+int bsock, clients_max, master, *client, *cores, bytes, cores_total;
 struct sockaddr_in addr;
 socklen_t addr_len = sizeof(struct sockaddr_in);
 struct net_msg broadcast_msg;
@@ -58,21 +58,29 @@ int main(int argc, char** argv)
     shutdown(bsock, SHUT_RDWR);
     close(bsock);
 
+    // Jobs distribution
     struct net_msg request;
+    long double a = 0, b = 3;
+    long double h = (b - a)/SPLIT;
+    unsigned cores_count = 0;
     for (int i = 0; i < clients_max; ++i) {
         request = (struct net_msg) {
             0,
             cores[i],
-            1,
-            0,
-            3,
-            3
+            SPLIT/cores_total*cores[i],
+            (b - a)/cores_total*cores_count,
+            (b - a)/cores_total*(cores_count + cores[i]),
+            h
         };
         ERRTEST(bytes = write(client[i], &request, sizeof(struct net_msg)));
         if (bytes != sizeof(struct net_msg))
             ERROR("Net message sending failed");
+        cores_count += cores[i];
     }
 
+    PRINT("Requests sent");
+
+    // Results collection
     long double S = 0;
     for (int i = 0; i < clients_max; ++i) {
         ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
@@ -84,7 +92,7 @@ int main(int argc, char** argv)
         PRINT("Client (%d) := %Lf", i, request.h);
     }
 
-    printf("\n%Lf\n\n", S);
+    printf("\n%.6Lf\n\n", S);
 
     free(client);
     free(cores);
@@ -175,6 +183,7 @@ void wait_for_clients() {
                 else {
                     cores[i] = recv_msg.cores;
                     cores_info += 1;
+                    cores_total += recv_msg.cores;
                     PRINT("Client %d has %d core%s", i, cores[i], ((cores[i] > 1) ? "s" : ""));
                 }
             }

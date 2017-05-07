@@ -40,6 +40,8 @@ int main()
     long double interval_start = msg.interval_start,
                 interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
 
+    PRINT("Calculation start");
+
     for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
         data[i] = interval_start;
         if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
@@ -52,7 +54,7 @@ int main()
             ERROR("Thread joining failed");
         S += *r;
     }
-    PRINT("Result = %.12Lf", S);
+    PRINT("Result = %.6Lf", S);
 
     msg.h = S;
     ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
@@ -109,7 +111,7 @@ void wait_for_job() {
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")
     else
-        PRINT("Ready for calculation");
+        PRINT("Waiting for job");
 
     ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
     if (!bytes)

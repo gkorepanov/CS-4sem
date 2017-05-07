@@ -1,6 +1,7 @@
 #define DEBUG
 #define BROADCAST_PORT  10001
 #define FUNC(x)         x
+#define SPLIT           500000000
 
 struct net_msg {
     int tcp_port;

@@ -14,7 +14,57 @@
 
 struct sockaddr_in baddr;
 struct net_msg msg;
-long double h, h2, S;
+int sock, bytes;
+struct sockaddr_in addr;
+socklen_t addr_len = sizeof(struct sockaddr_in);
+long double h, h2;
+long double* data;
+pthread_t* threads;
+
+void recv_broadcast();
+void wait_for_job();
+void* simpson(void* args);
+
+
+int main()
+{
+    recv_broadcast();
+    wait_for_job();
+
+    if (!(threads = malloc(msg.cores * sizeof(pthread_t))) ||
+        !(data = malloc(msg.cores * sizeof(long double))))
+        ERROR("Memory allocation failed");
+
+    h = msg.h;
+    h2 = h/2;
+    long double interval_start = msg.interval_start,
+                interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
+
+    for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
+        data[i] = interval_start;
+        if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+            ERROR("Thread creation failed");
+    }
+
+    long double S = 0, *r;
+    for (unsigned i = 0; i < msg.cores; ++i) {
+        if (pthread_join(threads[i], (void**) &r))
+            ERROR("Thread joining failed");
+        S += *r;
+    }
+    PRINT("Result = %.12Lf", S);
+
+    msg.h = S;
+    ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
+        if (bytes != sizeof(struct net_msg))
+            ERROR("Net message sending failed");
+
+    PRINT("Done.")
+    shutdown(sock, SHUT_RDWR);
+    close(sock);
+    exit(EXIT_SUCCESS);
+}
+
 
 void recv_broadcast() {
     int bsock, recv_bytes;
@@ -41,8 +91,33 @@ void recv_broadcast() {
 }
 
 
-long double* data;
-pthread_t* threads;
+void wait_for_job() {
+    ERRTEST(sock = socket(PF_INET, SOCK_STREAM, 0));
+    memset(&addr, 0, addr_len);
+    addr.sin_addr.s_addr = baddr.sin_addr.s_addr;
+    addr.sin_port = baddr.sin_port;
+    addr.sin_family = AF_INET;
+
+    int ld1 = 1;
+    ERRTEST(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
+    ERRTEST(connect(sock, (struct sockaddr*)&addr, addr_len));
+    getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
+    PRINT("Connected (port %d)", ntohs(baddr.sin_port));
+
+    msg.cores = 1;
+    ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
+    if (bytes != sizeof(struct net_msg))
+        ERROR("Net message sending failed")
+    else
+        PRINT("Ready for calculation");
+
+    ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
+    if (!bytes)
+        ERROR("Connection closed")
+    else if (bytes != sizeof(struct net_msg))
+        ERROR("Net message receiving failed");
+}
+
 
 void* simpson(void* args) {
     long double lh = h,
@@ -65,74 +140,5 @@ void* simpson(void* args) {
     }
 
     *(long double*)args = sum * h/6;
-    PRINT("%Lf", *(long double*)args);
     pthread_exit(args);
-}
-
-
-int main()
-{
-    recv_broadcast();
-
-    int sock;
-    struct sockaddr_in addr;
-    socklen_t addr_len = sizeof(struct sockaddr_in);
-
-    ERRTEST(sock = socket(PF_INET, SOCK_STREAM, 0));
-    memset(&addr, 0, addr_len);
-    addr.sin_addr.s_addr = baddr.sin_addr.s_addr;
-    addr.sin_port = baddr.sin_port;
-    addr.sin_family = AF_INET;
-
-    int ld1 = 1;
-    ERRTEST(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
-    ERRTEST(connect(sock, (struct sockaddr*)&addr, addr_len));
-    getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
-    PRINT("Connected (port %d)", ntohs(baddr.sin_port));
-
-    msg.cores = 1;
-    int wrote_bytes;
-    ERRTEST(wrote_bytes = write(sock, &msg, sizeof(struct net_msg)));
-    if (wrote_bytes != sizeof(struct net_msg))
-        ERROR("Net message sending failed")
-    else
-        PRINT("Ready for calculation");
-
-    int bytes;
-    ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
-    if (!bytes)
-        ERROR("Connection closed")
-    else if (bytes != sizeof(struct net_msg))
-        ERROR("Net message receiving failed");
-
-    if (!(threads = malloc(msg.cores * sizeof(pthread_t))) ||
-        !(data = malloc(msg.cores * sizeof(long double))))
-        ERROR("Memory allocation failed");
-
-    h = msg.h;
-    h2 = h/2;
-    long double interval_start,
-                interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
-    unsigned i;
-
-    for (i = 0, interval_start = msg.interval_start;
-         i < msg.cores;
-         ++i, interval_start += interval_len) {
-        data[i] = interval_start;
-        if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
-            ERROR("Thread creation failed");
-    }
-
-    long double S = 0, *r;
-    for (i = 0; i < msg.cores; ++i) {
-        if (pthread_join(threads[i], (void**) &r))
-            ERROR("Thread joining failed");
-        S += *r;
-    }
-
-    PRINT("Result = %.12Lf\n", S);
-
-    shutdown(sock, SHUT_RDWR);
-    close(sock);
-    return 0;
 }

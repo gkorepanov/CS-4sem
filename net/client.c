@@ -84,6 +84,8 @@ void recv_broadcast() {
     ERRTEST(setsockopt(bsock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(bind(bsock, (struct sockaddr*)&baddr, baddr_len));
 
+    PRINT("Waiting for the server...");
+
     ERRTEST(recv_bytes = recvfrom(bsock, &msg, sizeof(struct net_msg),
         0, (struct sockaddr *)&baddr, &baddr_len));
     if (recv_bytes != sizeof(struct net_msg))
@@ -114,7 +116,7 @@ void wait_for_job() {
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")
     else
-        PRINT("Waiting for job");
+        PRINT("Waiting for job...");
 
     ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
     if (!bytes)

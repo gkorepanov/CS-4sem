@@ -1,8 +1,11 @@
-.PHONY: clean run
+.PHONY: all clean
 
 TARGET = ./server ./client
-FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -O3
 DEPS = $(OBJS:.o=.d)
+FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -O3
+ifeq ($(shell uname),Linux)
+	FLAGS += -pthread
+endif
 
 
 all: $(TARGET)
@@ -23,6 +26,3 @@ clean:
 	-@rm $(OBJS) $(TARGET)
 	-@find . -name "*.o" | xargs rm -rf
 	-@find . -name "*.d" | xargs rm -rf
-
-run: $(TARGET) 
-	echo NIY

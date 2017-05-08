@@ -106,8 +106,8 @@ void arg_process(int argc, char** argv) {
 
     if (!sscanf(argv[1], "%Lf", &a) || !sscanf(argv[2], "%Lf", &b))
         ERROR("Invalid argument (type <long double>)");
-    if (!sscanf(argv[3], "%u", &clients_max))
-        ERROR("Invalid argument (type <unsigned>)");
+    if (!sscanf(argv[3], "%d", &clients_max))
+        ERROR("Invalid argument (type <int>)");
 }
 
 

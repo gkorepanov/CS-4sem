@@ -1,1 +1,1 @@
-# Intrgral calculator with distributed computational powers.
+# Distributed integral calculator

@@ -14,7 +14,7 @@
 
 
 #define FUNC(x) x*x/(1/x+x-2+x*x)*x
-#define DEFAULT_SPLIT 500000000
+#define DEFAULT_SPLIT 1000000000
 
 // hope there are no more than 256 ones
 #define MAX_CPUS 256
@@ -103,38 +103,38 @@ int main(int argc, char** argv) {
     else {
 
 
-        if (!(threads = malloc(online_virtual_cpus_num * sizeof(pthread_t))) ||
-        !(data = malloc(online_virtual_cpus_num * sizeof(SimpsonData))))
+        if (!(threads = malloc(N * sizeof(pthread_t))) ||
+        !(data = malloc(N * sizeof(SimpsonData))))
         ERROR("Memory allocation failed");
 
         // prepare variables for calculation
-        steps = DEFAULT_SPLIT / online_virtual_cpus_num;
+        steps = DEFAULT_SPLIT / N;
         h = (b - a) / DEFAULT_SPLIT;
         h2 = h/2;
         long double interval_start,
-                    interval_len = (b - a)/online_virtual_cpus_num;
+                    interval_len = (b - a)/N;
                     unsigned i;
 
         for (i = 0, interval_start = a;
-             i < online_virtual_cpus_num;
+             i < N;
              ++i, interval_start += interval_len) {
 
             data[i] = (SimpsonData) {
                 interval_start,
-                virtual_cpu_sets[i],
+                virtual_cpu_sets[i%online_virtual_cpus_num],
                 i
             };
 
-            PRINT("Running thread on virtual core %u", i);
+            PRINT("Running thread on virtual core %u", i%online_virtual_cpus_num);
         }
 
         //PRINT("online_virtual_cpus_num %u", online_virtual_cpus_num);
-        for (unsigned i = 0; i < online_virtual_cpus_num; i++)
+        for (unsigned i = 0; i < N; i++)
             if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
                 ERROR("Thread creation failed");
 
         long double S = 0, *r;
-        for (unsigned i = 0; i < online_virtual_cpus_num; ++i) {
+        for (unsigned i = 0; i < N; ++i) {
             if (pthread_join(threads[i], (void**) &r))
                 ERROR("Thread joining failed");
                 S += *r;
@@ -154,6 +154,8 @@ void arg_process(int argc, char** argv) {
 
     if (!sscanf(argv[1], "%Lf", &a) || !sscanf(argv[2], "%Lf", &b))
         ERROR("Invalid argument (type <long double>)");
+    if (b <= a)
+        ERROR("Please provide ascending limits of integration");
     if (!sscanf(argv[3], "%u", &N))
         ERROR("Invalid argument (type <unsigned>)");
 }
@@ -252,7 +254,7 @@ void* simpson(void* args) {
             ERROR("Sticking thread %u to specific core failed, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
     
 
-    //PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+    PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
 
     long double lh = h,
                 lh2 = h2,

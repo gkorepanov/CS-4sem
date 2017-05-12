@@ -13,7 +13,7 @@
 
 struct sockaddr_in baddr;
 struct net_msg msg;
-int sock, bytes;
+int sock, bytes, cores;
 struct sockaddr_in addr;
 socklen_t addr_len = sizeof(struct sockaddr_in);
 long double h, h2;
@@ -27,47 +27,47 @@ void* simpson(void* args);
 
 int main()
 {
-    recv_broadcast();
-    wait_for_job();
-
-    if (!(threads = malloc(msg.cores * sizeof(pthread_t))) ||
-        !(data = malloc(msg.cores * sizeof(long double))))
+    cores = sysconf(_SC_NPROCESSORS_ONLN);
+    if (!(threads = malloc(cores * sizeof(pthread_t))) ||
+        !(data    = malloc(cores * sizeof(long double))))
         ERROR("Memory allocation failed");
 
-    h = msg.h;
-    h2 = h/2;
-    long double interval_start = msg.interval_start,
-                interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
+    while(1) {
+        recv_broadcast();
+        wait_for_job();
 
-    PRINT("Calculation started");
-    PRINT("Int [%.6Lf:%.6Lf] (%u steps)",
-        msg.interval_start, msg.interval_end, msg.steps);
+        h = msg.h;
+        h2 = h/2;
+        long double interval_start = msg.interval_start,
+                    interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
 
-    for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
-        data[i] = interval_start;
-        if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
-            ERROR("Thread creation failed");
+        PRINT("Calculation started");
+        PRINT("Int [%.6Lf:%.6Lf] (%u steps)",
+            msg.interval_start, msg.interval_end, msg.steps);
+
+        for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
+            data[i] = interval_start;
+            if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
+                ERROR("Thread creation failed");
+        }
+
+        long double S = 0, *r;
+        for (unsigned i = 0; i < msg.cores; ++i) {
+            if (pthread_join(threads[i], (void**) &r))
+                ERROR("Thread joining failed");
+            S += *r;
+        }
+        PRINT("Result = %.6Lf", S);
+
+        msg.h = S;
+        ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
+            if (bytes != sizeof(struct net_msg))
+                ERROR("Net message sending failed");
+
+        PRINT("Done.")
+        shutdown(sock, SHUT_RDWR);
+        close(sock);
     }
-
-    long double S = 0, *r;
-    for (unsigned i = 0; i < msg.cores; ++i) {
-        if (pthread_join(threads[i], (void**) &r))
-            ERROR("Thread joining failed");
-        S += *r;
-    }
-    PRINT("Result = %.6Lf", S);
-
-    msg.h = S;
-    ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
-        if (bytes != sizeof(struct net_msg))
-            ERROR("Net message sending failed");
-
-    PRINT("Done.")
-    shutdown(sock, SHUT_RDWR);
-    close(sock);
-    free(threads);
-    free(data);
-    exit(EXIT_SUCCESS);
 }
 
 
@@ -111,7 +111,7 @@ void wait_for_job() {
     getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
     PRINT("Connected (port %d)", ntohs(baddr.sin_port));
 
-    msg.cores = sysconf(_SC_NPROCESSORS_ONLN);
+    msg.cores = cores;
     ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")

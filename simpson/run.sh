@@ -16,14 +16,14 @@ do
     for ((n=0; n<$RUNS; n++));
     do
         echo -n "run $n: ";
-        TIME="$( { /usr/bin/time -f "%e" ./integral -1 1 $cpus > /dev/null; } 2>&1 )";
+        TIME="$( { /usr/bin/time -f "%e" ./integral $cpus > /dev/null; } 2>&1 )";
         SUM=$(python -c "print($TIME + $SUM)");
         echo $TIME;
         sleep 1;
     done
 
-    AVG_TIME=$(python -c "print(round(float($SUM)/$RUNS, 2))");
-    EXE_TIME=$(python -c "print(round(float($SUM)/$RUNS*$cpus, 2))");
+    AVG_TIME=$(python -c "print(round(float($SUM)/$RUNS, 3))");
+    EXE_TIME=$(python -c "print(round(float($SUM)/$RUNS*$cpus, 3))");
 
     echo -e "Avg time: $AVG_TIME";
     echo -e "Exe time: \033[33m${EXE_TIME}\033[39m\n";

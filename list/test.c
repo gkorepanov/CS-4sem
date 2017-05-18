@@ -168,8 +168,8 @@ cut_list(List *list) {
     unsigned int initial_size = list_size(list);
 
     for (unsigned int i = 1; i <= N_CUT; ++i) {
-        list_rpop(list);
-        list_lpop(list);
+        list_node_destroy(list_rpop(list));
+        list_node_destroy(list_lpop(list));
 
         assert(list_size(list) == (initial_size - (i*2)));
     }
@@ -205,11 +205,15 @@ void check_failures(List* list) {
     // Check inserts and pops and removes for last elements
     REPEAT(node = list_node_new(&a));
     list_rpush(list, node);
-    assert(*(int*)list_node_getval(list_rpop(list)) == 237);
+    node = list_rpop(list);
+    assert(*(int*)list_node_getval(node) == 237);
+    list_node_destroy(node);
 
     REPEAT(node = list_node_new(&a));
     list_lpush(list, node);
-    assert(*(int*)list_node_getval(list_lpop(list)) == 237);
+    node = list_lpop(list);
+    assert(*(int*)list_node_getval(node) == 237);
+    list_node_destroy(node);
 
     REPEAT(node = list_node_new(&a));
     list_rpush(list, node);
@@ -217,6 +221,8 @@ void check_failures(List* list) {
 
     assert(list_size(list) == 0);
     assert(list_rpop(list) == NULL);
+
+    list_destroy(list);
 
     TEST_OK();
 }

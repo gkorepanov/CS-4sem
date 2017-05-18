@@ -13,7 +13,7 @@
 #include "../tools/alerts.h"
 
 
-#define FUNC(x) x*x/(1/x+x-2+x*x)*x
+#define FUNC(x) x*x/(1/x+x-2+x*x)
 #define DEFAULT_SPLIT 1000000000
 
 // hope there are no more than 256 ones
@@ -51,10 +51,8 @@ void* simpson(void* args);
 int main(int argc, char** argv) {
     arg_process(argc, argv);               // acquire left and right bounds (a, b) and number of lines N
     cpu_process();                         // acquire lists of online cores and thread siblings
-
-       
+    
     if (!use_hyper) {
-
         if (!(threads = malloc(online_cpus_num * sizeof(pthread_t))) ||
         !(data = malloc(online_cpus_num * sizeof(SimpsonData))))
         ERROR("Memory allocation failed");
@@ -84,7 +82,7 @@ int main(int argc, char** argv) {
                 i
             };
 
-            PRINT("Running thread on core %u", j);
+            PRINTLN("Running thread on core %u", j);
         }
 
         for (i = 0; i < online_cpus_num; i++)
@@ -98,11 +96,13 @@ int main(int argc, char** argv) {
             if (i < N)
                 S += *r;
         }
-        printf("%.12Lf\n", S);
+
+        PRINTLN("-----------------------------------------------------------------------\n"
+                "                                RESULT                                 \n"
+                "-----------------------------------------------------------------------\n"
+                GREEN "%.15Lf\n", S);
     }
     else {
-
-
         if (!(threads = malloc(N * sizeof(pthread_t))) ||
         !(data = malloc(N * sizeof(SimpsonData))))
         ERROR("Memory allocation failed");
@@ -125,10 +125,9 @@ int main(int argc, char** argv) {
                 i
             };
 
-            PRINT("Running thread on virtual core %u", i%online_virtual_cpus_num);
+            //PRINTLN("Running thread on virtual core %u", i%online_virtual_cpus_num);
         }
 
-        //PRINT("online_virtual_cpus_num %u", online_virtual_cpus_num);
         for (unsigned i = 0; i < N; i++)
             if (pthread_create(&threads[i], NULL, &simpson, &data[i]))
                 ERROR("Thread creation failed");
@@ -139,7 +138,11 @@ int main(int argc, char** argv) {
                 ERROR("Thread joining failed");
                 S += *r;
         }
-        printf("%.12Lf\n", S);
+
+        PRINTLN("-----------------------------------------------------------------------\n"
+                "                                RESULT                                 \n"
+                "-----------------------------------------------------------------------\n"
+                GREEN "%.15Lf\n", S);
     }
     free(threads);
     free(data);
@@ -149,15 +152,27 @@ int main(int argc, char** argv) {
 
 
 void arg_process(int argc, char** argv) {
-    if (argc != 4)
+    /*if (argc != 4)
         ERROR("Usage: integral [lower bound] [upper bound] [NUMBER OF THREADS]");
 
     if (!sscanf(argv[1], "%Lf", &a) || !sscanf(argv[2], "%Lf", &b))
         ERROR("Invalid argument (type <long double>)");
+
     if (b <= a)
         ERROR("Please provide ascending limits of integration");
+
     if (!sscanf(argv[3], "%u", &N))
+        ERROR("Invalid argument (type <unsigned>)");*/
+
+    if (argc != 2)
+        ERROR("Usage: integral [NUMBER OF THREADS]");
+
+    if (!sscanf(argv[1], "%u", &N))
         ERROR("Invalid argument (type <unsigned>)");
+    a = 4;
+    b = 10;
+
+    PRINTLN("Running " GREEN "%u" DCOLOR " threads...", N);
 }
 
 
@@ -209,7 +224,7 @@ void cpu_process() {
             continue;
 
         CPU_SET(i, &virtual_cpu_sets[online_virtual_cpus_num]);
-        PRINT("%u virtual core is online", online_virtual_cpus_num);
+        PRINTLN(GREEN "%u" DCOLOR " virtual core is online", online_virtual_cpus_num);
         online_virtual_cpus_num++;
 
         // read the corresponding physical core number
@@ -233,14 +248,15 @@ void cpu_process() {
             CPU_SET(i, &cpu_sets[core_id]);
         }
 
-        PRINT("%d virtual cpu is on %d physical core\n", i, core_id);
+        PRINTLN(GREEN "%d" DCOLOR " virtual cpu is on " YELLOW "%d" DCOLOR " physical core\n", i, core_id);
 
     }
 
     if (online_cpus_num < N) {
-        PRINT("The number of physical cores online is less"
-        " than requested number of threads, running with all available virtual cores");
-        PRINT("Virtual cores available: %u\n", online_virtual_cpus_num);
+        PRINTLN(RED "The number of physical cores online is less"
+        " than requested number of threads!\n" DCOLOR
+        "Running with all available virtual cores...");
+        PRINTLN("Virtual cores available: " YELLOW "%u\n" DCOLOR, online_virtual_cpus_num);
         use_hyper = 1;
     }
 
@@ -254,7 +270,7 @@ void* simpson(void* args) {
             ERROR("Sticking thread %u to specific core failed, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
     
 
-    PRINT("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
+    //PRINTLN("Thread %u is running, interval start: %Lf", ((SimpsonData*)args)->n, ((SimpsonData*)args)->a);
 
     long double lh = h,
                 lh2 = h2,

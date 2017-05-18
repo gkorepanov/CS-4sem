@@ -53,6 +53,11 @@ list_new() {
     return self;
 }
 
+void
+list_node_destroy(ListNode* self) {
+    LIST_FREE(self);
+}
+
 
 void
 list_destroy(List *self) {

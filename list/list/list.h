@@ -28,6 +28,9 @@ typedef enum {
 ListNode *
 list_node_new(void *val);
 
+void
+list_node_destroy(ListNode* self);
+
 void *
 list_node_getval(ListNode *node);
 

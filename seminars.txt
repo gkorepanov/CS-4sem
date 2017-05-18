@@ -1,0 +1,73 @@
+==  unix domain socket + pass file descriptor
+
+==  May I move the process from one server to another
+    in such a way that process itself mentions nothing?
+
+    All virtualisation systems allow this.
+    But only if that process is not bound
+    to something external (pipe, children etc...).
+    Thus, the process should be alone.
+    Moreover, on the second server there should be just the same file system.
+
+    Container is just a box, so we should only provide
+    the same ip address on the other machine.
+
+==  Once more:
+
+        1.  Same FS + same data on disk
+        2.  Move process (probably with kernel's help)
+
+==  What is a process?
+
+        1.  data in user space
+        2.  kernel structures describing
+            (task struct/process control block) the process.
+
+    We might want to move an exclusive set of processes
+    with their pipes and even buffers.
+
+==  With virtual machine it's quite easy:
+    everything we need is comprised with it's memory.
+    So we just 
+
+        1.  stop the machine
+        2.  pass the memory and the state of devices...
+        3.  ... so quickly that processes do not mention this.
+
+==  It's quite practical:
+    hardware faults, updating the kernel
+
+    What are the defining parameters?
+
+        1.  Overall pass time
+        2.  Downtime (100's of milliseconds is achievable on modern systems)
+
+==  How is it achievable?
+
+        1.  the bitmap containing 1's represent the pages in memory
+        2.  when we start passing the page to other device,
+            0 is set to the corresponding bit.
+        3.  when the pages is touched, it's to be passed once more.
+
+==  In fact guest touches pages too fast. What should we do?
+
+        1.  slow down the guest (adaptive)
+
+            The channel is the slowest point of mechanism.
+            Possible solution is to zip the memory.
+            zstd by FaceBook.
+        2.  The system might work not by PUSH technology, but by PULL
+            a.  Convey the state (very quickly).
+            b.  When the guest tries to access the memory, there is a page fault
+                We just send the data from first machine to the second and
+                resolve the page fault.
+
+                The downtime is less. The overall perfomance is better.
+                But this mechanism is highly less reliable.
+                If getter experiences problems, we will lose everything,
+                though in previous method everything could be resttored.
+
+
+        Open-source project:
+        CRIU: checkpoint and r? in userspace.
+        Alive migration of docker is made on the basis of technlogy described.

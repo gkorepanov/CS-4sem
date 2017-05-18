@@ -34,16 +34,13 @@ char __ALERTS_BUFFER1[BUFSIZ],
     exit   (EXIT_FAILURE);\
   }
 
-  #ifdef DEBUG
-    #define PRINT(...)\
+  #define PRINT(...)\
     {\
       sprintf(__ALERTS_BUFFER1, YELLOW "PID %d:  " NORM, getpid());\
       sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
-      fprintf(stderr, "%s%s\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
+      fprintf(stdout, "%s%s", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
+      fflush(stdout);\
     }
-  #else  // DEBUG
-    #define PRINT(...)
-  #endif // DEGUG
 
 #else  // MSGPID
   #define ERROR(...)\
@@ -54,6 +51,7 @@ char __ALERTS_BUFFER1[BUFSIZ],
     exit   (EXIT_FAILURE);\
   }
 
+  
   #define ERRORV(...)\
   {\
     sprintf(__ALERTS_BUFFER1, ERR UL "@%d" UN_UL "  ", __LINE__);\
@@ -62,17 +60,29 @@ char __ALERTS_BUFFER1[BUFSIZ],
     exit   (EXIT_FAILURE);\
   }
 
-  #ifdef DEBUG
-    #define PRINT(...)\
-    {\
-      sprintf(__ALERTS_BUFFER1, LGRAY);\
-      sprintf(__ALERTS_BUFFER2, __VA_ARGS__);\
-      fprintf(stderr, "%s%s" NORM "\n", __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
-    }
-  #else  // DEBUG
-    #define PRINT(...)
-  #endif // DEGUG
+  #define PRINT(...)\
+  {\
+    sprintf(__ALERTS_BUFFER1, LGRAY);\
+    sprintf(__ALERTS_BUFFER2,  __VA_ARGS__);\
+    fprintf(stdout, "%s%s" NORM, __ALERTS_BUFFER1, __ALERTS_BUFFER2);\
+    fflush(stdout);\
+  }
+
 #endif // MSGPID
+
+#define PRINTLN(...) \
+{\
+  PRINT(__VA_ARGS__); \
+  fprintf(stdout, "\n");\
+  fflush(stdout);\
+}
+
+
+#ifdef DEBUG
+    #define DBG_PRINT(...) PRINTLN(__VA_ARGS__)
+#else  // DEBUG
+    #define DBG_PRINT(...)
+#endif // DEGUG
 
 
 #define ERRTEST(...) \

@@ -1,13 +1,16 @@
-.PHONY: clean run
+.PHONY: clean test
 
-TARGET = ./main
-FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g
+TARGET = ./bin/test
+FLAGS = -std=c99 -Wall -Wextra -Wextra -Werror -Wpedantic -g
 LFLAGS = -fprofile-arcs -ftest-coverage
-OBJS = list.o main.o
+
+SRCS = list/list.c list/list_iterator.c test.c
+OBJS = $(SRCS:.c=.o)
 DEPS = $(OBJS:.o=.d)
 
 
 $(TARGET): $(OBJS)
+	@mkdir -p bin
 	gcc $(LFLAGS) -o $@ $^
 
 -include $(DEPS)
@@ -17,17 +20,19 @@ $(TARGET): $(OBJS)
 	gcc $(FLAGS) $(LFLAGS) -MM -o $(patsubst %.o, %.d, $@) $<
 
 clean:
-	-@rm $(OBJS) $(TARGET)
+	-@rm -rf $(OBJS) $(TARGET)
 	-@find . -name "*.d"    | xargs rm -rf
 	-@find . -name "*.gcov" | xargs rm -rf
 	-@find . -name "*.gcno" | xargs rm -rf
 	-@find . -name "*.gcda" | xargs rm -rf
+	-@rm -rf bin
 
-run: $(TARGET) 
+test: $(TARGET) 
 	-@find . -name "*.gcov" | xargs rm -rf
 	-@find . -name "*.gcda" | xargs rm -rf
 	$(TARGET)
-	gcov -a list.c
+	gcov -a ./list/list.c ./list/list_iterator.c
 
 debug: FLAGS += -DDEBUG
 debug: $(TARGET)
+

@@ -11,6 +11,9 @@
 #include <netdb.h>
 #include "./net.h"
 #include "../tools/alerts.h"
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+
 
 int bsock, clients_max, master, *client, *cores, bytes, cores_total;
 struct sockaddr_in addr;
@@ -34,7 +37,7 @@ void enable_keepalive(int sock) {
     ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(int)));
 
     int maxpkt = 1;
-    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(int)) != -1);
+    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(int)));
 }
 
 

@@ -30,7 +30,7 @@ void enable_keepalive(int sock) {
     int yes = 1;
     ERRTEST(setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)));
 
-    int idle = 0;
+    int idle = 1;
 
 #ifdef LINUX
     ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int)));
@@ -126,8 +126,12 @@ int main(int argc, char** argv)
             }
     }
 
-    if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR))
-            ERRORV("Select failed");
+    if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR)) {
+        ERRORV("Select failed");
+    }
+    else {
+        PRINTLN("Select triggered...");
+    }
 
     for (int i = 0; i < clients_max; ++i) {
         if (FD_ISSET(client[i], &fds)) {

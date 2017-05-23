@@ -5,7 +5,7 @@ OBJS = server.o calculator.o
 DEPS = $(OBJS:.o=.d)
 FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -O3
 ifeq ($(shell uname),Linux)
-	FLAGS += -pthread
+	FLAGS += -pthread -DLINUX
 endif
 
 

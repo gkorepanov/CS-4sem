@@ -31,7 +31,12 @@ void enable_keepalive(int sock) {
     ERRTEST(setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)));
 
     int idle = 0;
+
+#ifdef LINUX
     ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int)));
+#else
+    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPALIVE, &idle, sizeof(int)));
+#endif
 
     int interval = 1;
     ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(int)));

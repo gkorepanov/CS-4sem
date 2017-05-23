@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
     long double interval_start = msg.interval_start,
                 interval_len = (msg.interval_end - msg.interval_start)/msg.cores;
 
-    PRINT("Calculation started");
-    PRINT("Int [%.6Lf:%.6Lf] (%u steps)",
+    PRINTLN("Calculation started");
+    PRINTLN("Int [%.6Lf:%.6Lf] (%u steps)",
         msg.interval_start, msg.interval_end, msg.steps);
 
     for (unsigned i = 0; i < msg.cores; ++i, interval_start += interval_len) {
@@ -67,14 +67,14 @@ int main(int argc, char** argv) {
             ERROR("Thread joining failed");
         S += *r;
     }
-    PRINT("Result = %.6Lf", S);
+    PRINTLN("Result = %.6Lf", S);
 
     msg.h = S;
     ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
         if (bytes != sizeof(struct net_msg))
             ERROR("Net message sending failed");
 
-    PRINT("Done.")
+    PRINTLN("Done.")
     shutdown(sock, SHUT_RDWR);
     close(sock);
     free(threads);
@@ -96,13 +96,13 @@ void recv_broadcast() {
     ERRTEST(setsockopt(bsock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(bind(bsock, (struct sockaddr*)&baddr, baddr_len));
 
-    PRINT("Waiting for the server...");
+    PRINTLN("Waiting for the server...");
 
     ERRTEST(recv_bytes = recvfrom(bsock, &msg, sizeof(struct net_msg),
         0, (struct sockaddr *)&baddr, &baddr_len));
     if (recv_bytes != sizeof(struct net_msg))
         ERROR("Net message receiving failed");
-    PRINT("Received %d bytes; server port %d", recv_bytes, msg.tcp_port);
+    PRINTLN("Received %d bytes; server port %d", recv_bytes, msg.tcp_port);
     baddr.sin_port = msg.tcp_port;
 
     shutdown(bsock, SHUT_RDWR);
@@ -121,7 +121,7 @@ void wait_for_job() {
     ERRTEST(setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &ld1, sizeof(ld1)));
     ERRTEST(connect(sock, (struct sockaddr*)&addr, addr_len));
     getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
-    PRINT("Connected (port %d)", ntohs(baddr.sin_port));
+    PRINTLN("Connected (port %d)", ntohs(baddr.sin_port));
 
     //msg.cores = sysconf(_SC_NPROCESSORS_ONLN);
 
@@ -131,7 +131,7 @@ void wait_for_job() {
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")
     else
-        PRINT("Waiting for job...");
+        PRINTLN("Waiting for job...");
 
     ERRTEST(bytes = read(sock, &msg, sizeof(struct net_msg)));
     if (!bytes)
@@ -152,7 +152,7 @@ void* simpson(void* args) {
                 sum = 0;
     unsigned steps = msg.steps/msg.cores;
 
-    PRINT("Thread int [%.6Lf:%.6Lf] (%u steps)", a, a + h*steps, steps);
+    PRINTLN("Thread int [%.6Lf:%.6Lf] (%u steps)", a, a + h*steps, steps);
     for (unsigned i = 0; i < steps; ++i) {
         func_c = FUNC(c);
         sum += func_a + 4 * FUNC(b) + func_c;

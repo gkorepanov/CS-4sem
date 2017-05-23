@@ -77,7 +77,7 @@ int main(int argc, char** argv)
         cores_count += cores[i];
     }
 
-    PRINT("Requests sent");
+    PRINTLN("Requests sent");
 
     // Results collection
 
@@ -104,7 +104,7 @@ int main(int argc, char** argv)
 
     for (int i = 0; i < clients_max; ++i) {
         if (FD_ISSET(client[i], &fds)) {
-            PRINT("Event @%d", client[i]);
+            PRINTLN("Event @%d", client[i]);
             ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
             if (!bytes)
                 ERROR("Connection closed")
@@ -112,7 +112,7 @@ int main(int argc, char** argv)
                 ERROR("Net message receiving failed");
             S += request.h;
 
-            PRINT("Client (%d) := %Lf", i, request.h);
+            PRINTLN("Client (%d) := %Lf", i, request.h);
         }
     }
 
@@ -166,7 +166,7 @@ void* broadcast(void* args) {
             0, (struct sockaddr*)&addr, addr_len));
         if (sent_bytes != sizeof(struct net_msg))
             ERROR("Net message sending failed")
-        PRINT("Sent %d bytes", sent_bytes);
+        PRINTLN("Sent %d bytes", sent_bytes);
         sleep(1);
     }
 
@@ -179,7 +179,7 @@ void wait_for_clients() {
     int clients_count = 0, cores_info = 0, maxsd;
     struct net_msg recv_msg;
 
-    PRINT("Waiting for clients (port %d)", broadcast_msg.tcp_port);
+    PRINTLN("Waiting for clients (port %d)", broadcast_msg.tcp_port);
     cores_total = 0;
 
     while (cores_info < clients_max) {
@@ -204,10 +204,10 @@ void wait_for_clients() {
             ERRORV("Select failed");
 
         if (FD_ISSET(master, &fds)) {
-            PRINT("Event @%d", master);
+            PRINTLN("Event @%d", master);
             int new;
             ERRTEST(new = accept(master, (struct sockaddr*)&addr, &addr_len));
-            PRINT("New connection (%d) [%s:%d]",
+            PRINTLN("New connection (%d) [%s:%d]",
                     clients_count, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
             for (int i = 0; i < clients_max; ++i)
                 if (!client[i]) {
@@ -219,7 +219,7 @@ void wait_for_clients() {
 
         for (int i = 0; i < clients_max; ++i)
             if (FD_ISSET(client[i], &fds)) {
-                PRINT("Event @%d", client[i]);
+                PRINTLN("Event @%d", client[i]);
                 ERRTEST(bytes = read(client[i], &recv_msg, sizeof(struct net_msg)));
                 if (!bytes)
                     ERROR("Connection closed")
@@ -229,11 +229,11 @@ void wait_for_clients() {
                     cores[i] = recv_msg.cores;
                     cores_info += 1;
                     cores_total += recv_msg.cores;
-                    PRINT("Client %d has %d core%s", i, cores[i], ((cores[i] > 1) ? "s" : ""));
+                    PRINTLN("Client %d has %d core%s", i, cores[i], ((cores[i] > 1) ? "s" : ""));
                 }
             }
     }
 
-    PRINT("Ready for calculation");
+    PRINTLN("Ready for calculation");
 }
 

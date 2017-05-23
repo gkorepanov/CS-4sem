@@ -126,26 +126,32 @@ int main(int argc, char** argv)
             }
     }
 
-    if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR)) {
-        ERRORV("Select failed");
-    }
-    else {
-        PRINTLN("Select triggered...");
-    }
 
-    for (int i = 0; i < clients_max; ++i) {
-        if (FD_ISSET(client[i], &fds)) {
-            PRINTLN("Event @%d", client[i]);
-            ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
-            if (!bytes)
-                ERROR("Connection closed")
-            else if (bytes != sizeof(struct net_msg))
-                ERROR("Net message receiving failed");
-            S += request.h;
+    int ready = 0;
+    while (ready < clients_max) {
+        if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR)) {
+            ERRORV("Select failed");
+        }
+        else {
+            PRINTLN("Select triggered...");
+        }
 
-            PRINTLN("Client (%d) := %Lf", i, request.h);
+        for (int i = 0; i < clients_max; ++i) {
+            if (FD_ISSET(client[i], &fds)) {
+                PRINTLN("Event @%d", client[i]);
+                ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
+                if (!bytes)
+                    ERROR("Connection closed")
+                else if (bytes != sizeof(struct net_msg))
+                    ERROR("Net message receiving failed");
+                S += request.h;
+                ++ready;
+
+                PRINTLN("Client (%d) := %Lf", i, request.h);
+            }
         }
     }
+    
 
     printf("\n%.6Lf\n\n", S);
 

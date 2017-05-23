@@ -1,6 +1,7 @@
 .PHONY: all clean
 
-TARGET = ./server ./client
+TARGET = ./distributor ./calculator
+OBJS = server.o calculator.o
 DEPS = $(OBJS:.o=.d)
 FLAGS = -Wall -Wextra -Wextra -Werror -Wpedantic -g -O3
 ifeq ($(shell uname),Linux)
@@ -10,10 +11,10 @@ endif
 
 all: $(TARGET)
 
-server: server.o
+distributor: distributor.o
 	gcc $(FLAGS) -o $@ $<
 
-client: client.o
+calculator: calculator.o
 	gcc $(FLAGS) -o $@ $<
 
 -include $(DEPS)
@@ -23,6 +24,6 @@ client: client.o
 	gcc $(FLAGS) -MM -o $(patsubst %.o, %.d, $@) $<
 
 clean:
-	-@rm $(OBJS) $(TARGET)
+	-@rm $(OBJS) $(TARGET) -rf
 	-@find . -name "*.o" | xargs rm -rf
 	-@find . -name "*.d" | xargs rm -rf

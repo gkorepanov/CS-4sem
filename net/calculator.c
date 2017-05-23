@@ -24,9 +24,21 @@ void recv_broadcast();
 void wait_for_job();
 void* simpson(void* args);
 
+int N;
 
-int main()
-{
+void arg_process(int argc, char** argv) {
+    if (argc != 2)
+        ERROR("Usage: %s [NUMBER OF THREADS]",
+            argv[0]);
+
+    if (!sscanf(argv[1], "%d", &N))
+        ERROR("Invalid argument (type <int>)");
+}
+
+
+int main(int argc, char** argv) {
+    arg_process(argc, argv);
+
     recv_broadcast();
     wait_for_job();
 
@@ -111,7 +123,10 @@ void wait_for_job() {
     getsockname(sock, (struct sockaddr*)&baddr, &addr_len);
     PRINT("Connected (port %d)", ntohs(baddr.sin_port));
 
-    msg.cores = sysconf(_SC_NPROCESSORS_ONLN);
+    //msg.cores = sysconf(_SC_NPROCESSORS_ONLN);
+
+    msg.cores = N;
+    
     ERRTEST(bytes = write(sock, &msg, sizeof(struct net_msg)));
     if (bytes != sizeof(struct net_msg))
         ERROR("Net message sending failed")

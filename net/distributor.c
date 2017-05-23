@@ -23,6 +23,22 @@ void* broadcast(void* args);
 void wait_for_clients();
 
 
+void enable_keepalive(int sock) {
+    int yes = 1;
+    ERRTEST(setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE, &yes, sizeof(int)));
+
+    int idle = 0;
+    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, &idle, sizeof(int)));
+
+    int interval = 1;
+    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, &interval, sizeof(int)));
+
+    int maxpkt = 1;
+    ERRTEST(setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, &maxpkt, sizeof(int)) != -1);
+}
+
+
+
 int main(int argc, char** argv)
 {
     arg_process(argc, argv);
@@ -80,6 +96,9 @@ int main(int argc, char** argv)
     PRINTLN("Requests sent");
 
     // Results collection
+    for (int i = 0; i < clients_max; ++i) {
+        enable_keepalive(client[i]);
+    }
 
     // Filling fd_set
     fd_set fds;

@@ -80,15 +80,40 @@ int main(int argc, char** argv)
     PRINT("Requests sent");
 
     // Results collection
+
+    // Filling fd_set
+    fd_set fds;
+    int maxsd = 0;
     long double S = 0;
+
+    FD_ZERO(&fds);
     for (int i = 0; i < clients_max; ++i) {
-        ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
-        if (!bytes)
-            ERROR("Connection closed")
-        else if (bytes != sizeof(struct net_msg))
-            ERROR("Net message receiving failed");
-        S += request.h;
-        PRINT("Client (%d) := %Lf", i, request.h);
+            if (client[i]) {
+                FD_SET(client[i], &fds);
+                if (client[i] > maxsd)
+                    maxsd = client[i];
+            }
+            else {
+                ERROR("Something went wrong, "
+                      "some of the fd's is NULL in collection");
+            }
+    }
+
+    if ((select(maxsd+1, &fds, NULL, NULL, NULL) == -1) && (errno != EINTR))
+            ERRORV("Select failed");
+
+    for (int i = 0; i < clients_max; ++i) {
+        if (FD_ISSET(client[i], &fds)) {
+            PRINT("Event @%d", client[i]);
+            ERRTEST(bytes = read(client[i], &request, sizeof(struct net_msg)));
+            if (!bytes)
+                ERROR("Connection closed")
+            else if (bytes != sizeof(struct net_msg))
+                ERROR("Net message receiving failed");
+            S += request.h;
+
+            PRINT("Client (%d) := %Lf", i, request.h);
+        }
     }
 
     printf("\n%.6Lf\n\n", S);
@@ -100,14 +125,21 @@ int main(int argc, char** argv)
 
 
 void arg_process(int argc, char** argv) {
-    if (argc != 4)
-        ERROR("Usage: %s [lower bound] [upper bound] [NUMBER OF CLIENTS]",
+    if (argc != 2)
+        ERROR("Usage: %s [NUMBER OF CLIENTS]",
             argv[0]);
 
+    a = 4;
+    b = 10;
+
+    if (!sscanf(argv[1], "%d", &clients_max))
+        ERROR("Invalid argument (type <int>)");
+
+    /*
     if (!sscanf(argv[1], "%Lf", &a) || !sscanf(argv[2], "%Lf", &b))
         ERROR("Invalid argument (type <long double>)");
-    if (!sscanf(argv[3], "%d", &clients_max))
-        ERROR("Invalid argument (type <int>)");
+    
+    */
 }
 
 
